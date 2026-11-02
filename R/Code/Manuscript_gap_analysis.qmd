@@ -63,6 +63,12 @@ library(knitr)
 # Species presence grid 
 load(here::here("R","Data", "puvsp_marine.Rdata"))
 
+# Restrict the grid to the 1,000 species analysed throughout the study (the species of the CAPTAIN prioritisations,
+# with range, trait, phylogenetic and IUCN data); this excludes 75 species without trait or phylogenetic data, including 6 chimaeras
+study_species <- gsub("_", " ", read.csv(here::here("R","Data", "continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"),
+                                         check.names = FALSE)$`Species name`)
+puvsp_marine <- puvsp_marine[, c("id", "lon", "lat", study_species)]
+
 # No-take MPA raster layer
 mpa_NT <- raster::raster(here::here("R","Data", "mpa_NT_binary.tif"))
 
@@ -81,6 +87,15 @@ Bathy <- raster(here::here("R","Data", "bathymetry-0.1deg-adjusted.tif"))
 # IUCN statuses
 IUCN <- readRDS(here::here("R","Data", "sharks_iucn_final.rds"))
 IUCN$species <- gsub("_", " ", IUCN$Species)
+
+# 32 species are named differently in the range data and in sharks_iucn_final (genus, spelling or gender ending):
+# use the range data names so that they are matched
+iucn_name_corrections <- read.csv(here::here("R","Data", "iucn_name_corrections.csv"))
+IUCN$species <- dplyr::coalesce(iucn_name_corrections$range_name[match(IUCN$species, iucn_name_corrections$iucn_name)], IUCN$species)
+
+# Bathyraja interrupta is not in sharks_iucn_final: Least Concern, as in the species metrics used for FUSE and EDGE2 and in the CAPTAIN input
+IUCN <- dplyr::bind_rows(IUCN, data.frame(Species = "Bathyraja_interrupta", species = "Bathyraja interrupta", iucn_GE = 0L)) %>%
+  dplyr::filter(species %in% study_species)
 ```
 
 # GAP analyses
@@ -114,7 +129,7 @@ calculate_mpa_percentage <- function(species_column, mpa_column) {
 }
 
 # Apply function to all species columns for both MPA types
-species_columns <- 4:(ncol(puvsp_marine) - 2)  # Assuming species columns start at 4
+species_columns <- study_species
 
 mpa_NT_percentages <- sapply(puvsp_marine[, species_columns], 
                              function(x) calculate_mpa_percentage(x, puvsp_marine$mpa_NT_present))
@@ -695,7 +710,7 @@ run_random_mpa_analysis <- function(species_data, mpa_raster, marine_mask, eez_m
                                                proj4string = sp::CRS(raster::projection(mpa_raster)))
   
   # Prepare results storage
-  species_columns <- 4:(ncol(species_data) - 1)  # Adjust if needed
+  species_columns <- setdiff(names(species_data), c("id", "lon", "lat", "mpa_NT_present"))
   all_results <- matrix(nrow = length(species_columns), ncol = n_iterations)
   rownames(all_results) <- names(species_data)[species_columns]
   
@@ -1152,7 +1167,7 @@ comparison_NT <- comparison_NT %>%
 
 # Reshape puvsp_marine from wide to long format
 puvsp_long <- puvsp_marine %>%
-  pivot_longer(cols = -c(id, lon, lat), names_to = "species", values_to = "presence") %>%
+  pivot_longer(cols = all_of(study_species), names_to = "species", values_to = "presence") %>%
   filter(!is.na(presence) & presence == 1)  # Only keep rows where species is present
 
 # Join SES data to puvsp_long

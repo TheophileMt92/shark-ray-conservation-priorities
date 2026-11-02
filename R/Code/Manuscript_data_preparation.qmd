@@ -1,0 +1,338 @@
+---
+title: "Manuscript_data_preparation"
+author: "Théophile L. Mouton"
+date: today
+date-format: "D MMMM YYYY"
+format:
+  html:
+    toc: true
+    number-sections: true
+    shift-heading-level-by: -1
+    toc-location: right
+    self-contained: true
+    code-fold: true
+    code-tools: true
+    lightbox: true
+    html-table-processing: none
+    fig-align: center
+    css: ../Quarto_template/custom.css
+    include-before-body: ../Quarto_template/header.html
+    include-after-body: ../Quarto_template/footer_uzh.html
+    theme: none
+    output-file: "Manuscript_data_preparation.html"
+editor: visual
+execute:
+  warning: false
+  error: false
+---
+
+## Purpose
+
+This report builds the species table used as input by the three CAPTAIN prioritisations (`R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`, the `trait_tbl_file` of the CAPTAIN configuration files). For each of the 1,000 species, it gives a class from 1 (lowest) to 5 (highest) for IUCN status, FUSE and EDGE2.
+
+The table was originally produced by the final section of the data preparation script (`R/Code/CAPTAIN_data_preparation.R`, section "Create .csv file for new CAPTAIN model (continental)"). In that version, the species names were taken from one table and the values from another, ordered differently, and the two were joined by row position (`cbind.data.frame()`). As a result, the IUCN, FUSE and EDGE2 classes of most species were attached to the wrong species names. This report rebuilds the table by matching species IDs, checks it against the IUCN Red List statuses, and compares it with the table used for the CAPTAIN runs of May 2025.
+
+In addition, 33 species of the range data were not found in the table of IUCN statuses (`sharks_iucn_final.rds`), and the data preparation script assigned them the most common status (Least Concern). Checking them one by one showed that 32 of them are in that table under a different name (genus, spelling or Latin gender ending; `R/Data/iucn_name_corrections.csv`). This report gives these 32 species their status from `sharks_iucn_final.rds`. The remaining species, *Bathyraja interrupta*, is not in that table and keeps Least Concern, which is also its status in the species metrics used for FUSE and EDGE2 and on the Red List.
+
+## Open R libraries
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(here)
+```
+
+## Input data
+
+```{r}
+# Conservation metrics of the 1,000 species, harmonised with the species grid and bounded at the 10% minimum
+metrics_10 <- readRDS(here::here("R", "Data", "continental_shark_conservation_metrics_10_harmonised_IUCN.rds"))
+
+# Species names and IDs
+species_lookup <- readRDS(here::here("R", "Data", "global_species_lookup.rds"))
+
+# Names of 32 species that differ between the range data and the table of IUCN statuses
+iucn_name_corrections <- read_csv(here::here("R", "Data", "iucn_name_corrections.csv"), show_col_types = FALSE)
+
+# IUCN Red List statuses (iucn_GE: 0 = Least Concern to 4 = Critically Endangered), with species names as in the range data
+iucn <- readRDS(here::here("R", "Data", "sharks_iucn_final.rds")) %>%
+  mutate(Species = gsub("_", " ", Species),
+         Species = coalesce(iucn_name_corrections$range_name[match(Species, iucn_name_corrections$iucn_name)], Species),
+         Species = gsub(" ", "_", Species))
+
+# Table used for the CAPTAIN runs of May 2025 (misaligned species names), kept for comparison
+table_may_2025 <- read_csv(here::here("R", "Data", "continental_shark_conservation_metrics_10_harmonised_IUCN_categories_May2025.csv"),
+                           show_col_types = FALSE)
+```
+
+## Species table
+
+Each metric is extracted with its species ID, and the three metrics and the species names are joined by species ID rather than by row position.
+
+```{r}
+get_metric <- function(metric, name) {
+  data.frame(sp = metrics_10[[metric]]$transformed$sp,
+             value = as.numeric(metrics_10[[metric]]$transformed$amount)) %>%
+    dplyr::rename(!!name := value)
+}
+
+species_table <- get_metric("iucn_GE", "IUCN") %>%
+  left_join(get_metric("FUSE", "FUSE"), by = "sp") %>%
+  left_join(get_metric("EDGE2", "EDGE2"), by = "sp") %>%
+  left_join(species_lookup, by = c("sp" = "species_id")) %>%
+  transmute(`Species name` = gsub(" ", "_", species_name), IUCN, FUSE, EDGE2) %>%
+  arrange(`Species name`)
+```
+
+## IUCN status of species named differently in the two datasets
+
+The 32 species listed below were assigned Least Concern in the data preparation because their names differ from those in `sharks_iucn_final.rds`. They are given their status from that table, rescaled in the same way as for all other species (status from 0 to 4, bounded at 0.1 and divided by 4).
+
+```{r}
+species_table <- species_table %>%
+  left_join(iucn %>% transmute(`Species name` = Species, IUCN_status = pmax(iucn_GE, 0.1) / 4), by = "Species name") %>%
+  mutate(IUCN_before = IUCN,
+         IUCN = coalesce(IUCN_status, IUCN))
+
+status_labels <- c("0.025" = "LC", "0.25" = "NT", "0.5" = "VU", "0.75" = "EN", "1" = "CR")
+
+renamed_species <- species_table %>%
+  mutate(range_name = gsub("_", " ", `Species name`)) %>%
+  inner_join(iucn_name_corrections, by = "range_name") %>%
+  transmute(`Name in the range data` = range_name,
+            `Name in sharks_iucn_final` = iucn_name,
+            Difference = difference,
+            `Status assigned before` = status_labels[as.character(IUCN_before)],
+            `Status now` = status_labels[as.character(IUCN)])
+
+kable(renamed_species, caption = "Species whose names differ between the range data and the table of IUCN statuses",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) %>%
+  scroll_box(height = "500px")
+
+species_table <- species_table %>% select(-IUCN_status, -IUCN_before)
+```
+
+Of these 32 species, `r sum(renamed_species$"Status now" != "LC")` now have a status other than Least Concern.
+
+## Classes
+
+IUCN status is converted to five classes (1 = Least Concern to 5 = Critically Endangered). FUSE and EDGE2 scores, rescaled to a maximum of 1, are binned into five classes of equal width (breaks at 0.2, 0.4, 0.6 and 0.8). Species are sorted alphabetically, as CAPTAIN matches the rows of the table to the species range rasters in alphabetical order.
+
+```{r}
+species_classes <- species_table %>%
+  mutate(IUCN = as.integer(as.character(factor(IUCN, levels = c(0.025, 0.25, 0.5, 0.75, 1), labels = 1:5))),
+         FUSE = as.integer(as.character(cut(FUSE, breaks = c(-Inf, 0.2, 0.4, 0.6, 0.8, Inf), labels = 1:5))),
+         EDGE2 = as.integer(as.character(cut(EDGE2, breaks = c(-Inf, 0.2, 0.4, 0.6, 0.8, Inf), labels = 1:5))))
+
+class_counts <- bind_rows(
+  count(species_classes, Class = IUCN) %>% mutate(Dimension = "IUCN"),
+  count(species_classes, Class = FUSE) %>% mutate(Dimension = "FUSE"),
+  count(species_classes, Class = EDGE2) %>% mutate(Dimension = "EDGE2")
+) %>%
+  pivot_wider(names_from = Dimension, values_from = n, values_fill = 0) %>%
+  arrange(Class)
+
+kable(class_counts, caption = "Number of species in each class (1 = lowest, 5 = highest)",
+      row.names = FALSE, align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+## Checks
+
+### Structure
+
+```{r}
+structure_checks <- tibble(
+  Check = c("Number of species", "Duplicated species", "Missing values",
+            "Sorted alphabetically (as required by CAPTAIN)"),
+  Result = c(as.character(nrow(species_classes)),
+             as.character(sum(duplicated(species_classes$`Species name`))),
+             as.character(sum(is.na(species_classes))),
+             ifelse(identical(species_classes$`Species name`, sort(species_classes$`Species name`, method = "radix")), "Yes", "No"))
+)
+
+kable(structure_checks, caption = "Structure of the species table", row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+### Agreement with IUCN Red List statuses
+
+The IUCN class of each species is compared with its status in `sharks_iucn_final.rds`, matched by species name (after correcting the 32 names above). *Bathyraja interrupta*, which is not in that table, is not included in the comparison.
+
+```{r}
+agreement <- function(tab) {
+  status <- iucn$iucn_GE[match(tab$`Species name`, iucn$Species)] + 1
+  c(n = sum(!is.na(status)), agreement = round(100 * mean(tab$IUCN == status, na.rm = TRUE), 1))
+}
+
+agreement_table <- rbind(
+  "Table used in May 2025" = agreement(table_may_2025),
+  "Corrected table" = agreement(species_classes)
+)
+
+kable(agreement_table, caption = "Percentage of species whose IUCN class matches their Red List status",
+      col.names = c("Species compared", "Agreement (%)")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+### Example species
+
+```{r}
+example_species <- c("Pristis_pristis", "Glaucostegus_typus", "Rhincodon_typus",
+                     "Carcharodon_carcharias", "Somniosus_microcephalus", "Gurgesiella_atlantica")
+
+examples <- species_classes %>%
+  filter(`Species name` %in% example_species) %>%
+  left_join(table_may_2025, by = "Species name", suffix = c(" (corrected)", " (May 2025)")) %>%
+  mutate(`Red List status` = c("LC", "NT", "VU", "EN", "CR")[iucn$iucn_GE[match(`Species name`, iucn$Species)] + 1]) %>%
+  select(`Species name`, `Red List status`, starts_with("IUCN"), starts_with("FUSE"), starts_with("EDGE2"))
+
+kable(examples, caption = "Classes of well-known species in the corrected table and in the table used in May 2025",
+      row.names = FALSE, align = "lcccccccc") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+### Species in the highest classes
+
+```{r}
+top_species <- function(tab, dimension) {
+  tab %>% filter(.data[[dimension]] == 5) %>% pull(`Species name`) %>% gsub("_", " ", .) %>% paste(collapse = ", ")
+}
+
+top_table <- tibble(
+  Dimension = c("FUSE", "EDGE2"),
+  `Corrected table` = c(top_species(species_classes, "FUSE"), top_species(species_classes, "EDGE2")),
+  `Table used in May 2025` = c(top_species(table_may_2025, "FUSE"), top_species(table_may_2025, "EDGE2"))
+)
+
+kable(top_table, caption = "Species in the highest class (class 5) for FUSE and EDGE2", row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = TRUE)
+```
+
+### Changes from the table used in May 2025
+
+```{r}
+compared <- species_classes %>%
+  left_join(table_may_2025, by = "Species name", suffix = c("", "_may2025"))
+
+changes <- tibble(
+  Dimension = c("IUCN", "FUSE", "EDGE2", "Any dimension"),
+  `Species with a different class` = c(sum(compared$IUCN != compared$IUCN_may2025),
+                                       sum(compared$FUSE != compared$FUSE_may2025),
+                                       sum(compared$EDGE2 != compared$EDGE2_may2025),
+                                       sum(compared$IUCN != compared$IUCN_may2025 |
+                                             compared$FUSE != compared$FUSE_may2025 |
+                                             compared$EDGE2 != compared$EDGE2_may2025))
+)
+
+kable(changes, caption = "Number of species (out of 1,000) whose class differs between the corrected table and the table used in May 2025",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+### Comparison with current IUCN Red List categories
+
+The IUCN statuses used in this study come from the global reassessment of sharks and rays (Dulvy et al. 2021). To check them against the Red List as it currently stands, the current category of each species is retrieved from the Global Biodiversity Information Facility (GBIF), which republishes the IUCN Red List as a checklist dataset ("The IUCN Red List of Threatened Species") and requires no access key. Each species name is first matched to the GBIF taxonomy, which resolves synonyms (e.g. *Dasyatis americana*, now *Hypanus americanus*), and the Red List category of the matched species is then retrieved. The results are saved to `R/Data/iucn_redlist_status_gbif.csv` the first time the report is rendered, and read from that file afterwards; delete the file to retrieve the categories again.
+
+```{r}
+iucn_current_file <- here::here("R", "Data", "iucn_redlist_status_gbif.csv")
+
+get_iucn_category <- function(species) {
+  match <- tryCatch(jsonlite::fromJSON(paste0("https://api.gbif.org/v1/species/match?class=Elasmobranchii&name=",
+                                              utils::URLencode(gsub("_", " ", species)))),
+                    error = function(e) list())
+  category <- NA_character_
+  iucn_name <- NA_character_
+  if (identical(match$rank, "SPECIES")) {
+    for (key in unique(c(match$acceptedUsageKey, match$usageKey))) {
+      result <- tryCatch(jsonlite::fromJSON(paste0("https://api.gbif.org/v1/species/", key, "/iucnRedListCategory")),
+                         error = function(e) NULL)
+      if (!is.null(result$code)) {
+        category <- result$code
+        iucn_name <- result$scientificName
+        break
+      }
+    }
+  }
+  tibble(`Species name` = species,
+         gbif_match_type = match$matchType %||% NA_character_,
+         gbif_status = match$status %||% NA_character_,
+         gbif_species = match$species %||% NA_character_,
+         iucn_name = iucn_name,
+         iucn_category = category)
+}
+
+if (!file.exists(iucn_current_file)) {
+  iucn_dataset <- jsonlite::fromJSON("https://api.gbif.org/v1/dataset/19491596-35ae-4a91-9a98-85cf505f1bd3")
+  iucn_current <- map_dfr(species_classes$`Species name`, get_iucn_category) %>%
+    mutate(retrieved = as.character(Sys.Date()),
+           iucn_dataset_published = substr(iucn_dataset$pubDate, 1, 10))
+  write.csv(iucn_current, iucn_current_file, row.names = FALSE)
+}
+
+iucn_current <- read_csv(iucn_current_file, show_col_types = FALSE)
+```
+
+The current categories were retrieved on `r unique(iucn_current$retrieved)`, from the version of the IUCN Red List dataset published on GBIF on `r unique(iucn_current$iucn_dataset_published)`.
+
+```{r}
+categories <- c("LC", "NT", "VU", "EN", "CR")
+
+comparison <- species_classes %>%
+  select(`Species name`, IUCN) %>%
+  mutate(`Class used` = categories[IUCN],
+         `Status in study data` = !is.na(match(`Species name`, iucn$Species))) %>%
+  left_join(iucn_current %>% select(`Species name`, gbif_species, iucn_category), by = "Species name") %>%
+  mutate(`Current category` = ifelse(is.na(iucn_category), "Not found", iucn_category),
+         Assessed = `Current category` %in% categories)
+
+current_summary <- comparison %>%
+  count(`Current category`) %>%
+  mutate(`Current category` = factor(`Current category`, levels = c(categories, "DD", "NE", "EX", "Not found"))) %>%
+  arrange(`Current category`)
+
+kable(current_summary, caption = "Current IUCN Red List category of the 1,000 species",
+      col.names = c("Current category", "Species"), row.names = FALSE, align = "lc") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+```{r}
+agreement_current <- comparison %>%
+  filter(Assessed) %>%
+  mutate(Origin = ifelse(`Status in study data`, "Red List status in study data", "Missing from study data (Bathyraja interrupta)")) %>%
+  group_by(Origin) %>%
+  summarise(Species = n(),
+            `Same category (%)` = round(100 * mean(`Class used` == `Current category`), 1),
+            `Threatened in one but not the other` = sum((`Class used` %in% c("VU", "EN", "CR")) != (`Current category` %in% c("VU", "EN", "CR"))),
+            .groups = "drop")
+
+kable(agreement_current,
+      caption = "Agreement between the IUCN class used in the corrected table and the current Red List category, for species currently assessed as LC to CR",
+      row.names = FALSE, align = "lccc") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+```{r}
+differences <- comparison %>%
+  filter(`Class used` != `Current category`) %>%
+  mutate(`Current name` = ifelse(gbif_species == gsub("_", " ", `Species name`) | is.na(gbif_species), "", gbif_species),
+         `Status in study data` = ifelse(`Status in study data`, "Yes", "No")) %>%
+  select(`Species name`, `Current name`, `Class used`, `Current category`, `Status in study data`) %>%
+  arrange(`Current category` %in% categories, `Species name`)
+
+kable(differences,
+      caption = "Species whose IUCN class in the corrected table differs from their current Red List category (including species now Data Deficient, Not Evaluated, Extinct or not found)",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) %>%
+  scroll_box(height = "500px")
+```
+
+## Save the species table
+
+```{r}
+write.csv(species_classes,
+          here::here("R", "Data", "continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"),
+          row.names = FALSE)
+```

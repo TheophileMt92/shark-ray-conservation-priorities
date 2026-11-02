@@ -37,6 +37,17 @@ All R analyses are provided as reproducible Quarto reports (`.qmd`), with their 
 
 Run the steps in the order below. Open `Manuscript repo.Rproj` first so that all `here::here()` paths resolve from the repository root.
 
+### Step 0. Data preparation (`R/Code/CAPTAIN_data_preparation.R` and `R/Code/Manuscript_data_preparation.qmd`)
+
+`CAPTAIN_data_preparation.R` documents how the species grid, the species range rasters and the conservation metrics (IUCN status, FUSE and EDGE2) were prepared from the raw data. It was written for the original project folder, so its input paths do not resolve within this repository, and it is provided for transparency.
+
+`Manuscript_data_preparation.qmd` reproduces its final step from files included in `R/Data/`: it builds the species table used by CAPTAIN (`continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`), with a class from 1 to 5 for IUCN status, FUSE and EDGE2 for each of the 1,000 species, and checks it against the IUCN Red List statuses.
+
+- **Inputs:** `continental_shark_conservation_metrics_10_harmonised_IUCN.rds`, `global_species_lookup.rds` and `sharks_iucn_final.rds`
+- **Output:** `R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`
+
+The table used for the CAPTAIN runs of May 2025 attached the classes to the wrong species names, because names and values were joined by row position. It is kept as `continental_shark_conservation_metrics_10_harmonised_IUCN_categories_May2025.csv` for comparison. The corrected table, built by matching species IDs, was produced in November 2026.
+
 ### Step 1. Fishing effort estimates (`R/Code/Manuscript_fishing_hours.qmd`)
 
 Combines AIS-based fishing hours from Global Fishing Watch (2017–2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024). SAR detections are normalised by the number of satellite overpasses per cell, and a random forest model is trained on cells with both data sources to predict fishing hours in cells with SAR detections only.
