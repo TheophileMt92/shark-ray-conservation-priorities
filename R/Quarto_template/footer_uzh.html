@@ -40,3 +40,159 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 </script>
+<script>
+/* Left sidebar: numbered contents (sections with their subsections), figures
+   and tables, each collapsible. The section being read is highlighted, and the
+   sidebar can be hidden */
+document.addEventListener("DOMContentLoaded", function () {
+  var toc = document.getElementById("TOC");
+  if (!toc) return;
+
+  var headings = Array.prototype.slice.call(document.querySelectorAll("h1[id], h2[id], h3[id]"))
+    .filter(function (h) {
+      return !h.closest("#TOC, .ocean-header, .ocean-footer, #title-block-header");
+    });
+
+  function clean(text, max) {
+    text = text.replace(/\s+/g, " ").trim();
+    return max && text.length > max ? text.slice(0, max - 3) + "..." : text;
+  }
+
+  function link(id, number, label, cls) {
+    var a = document.createElement("a");
+    a.href = "#" + id;
+    if (cls) a.className = cls;
+    if (number) {
+      var n = document.createElement("span");
+      n.className = "toc-number";
+      n.textContent = number;
+      a.appendChild(n);
+    }
+    a.appendChild(document.createTextNode(label));
+    return a;
+  }
+
+  function group(title, count) {
+    var details = document.createElement("details");
+    details.className = "toc-group";
+    details.open = true;
+    var summary = document.createElement("summary");
+    summary.textContent = title + (count !== undefined ? " (" + count + ")" : "");
+    details.appendChild(summary);
+    return details;
+  }
+
+  // Numbered contents: sections (h1) with their subsections (h2, h3)
+  var counters = [0, 0, 0];
+  var contents = group("Contents");
+  var topList = document.createElement("ul");
+  var currentSectionItem = null, currentSubList = null, currentH2List = null;
+  headings.forEach(function (h) {
+    var level = parseInt(h.tagName.slice(1), 10);
+    counters[level - 1]++;
+    for (var k = level; k < 3; k++) counters[k] = 0;
+    var numberSpan = h.querySelector(".header-section-number");
+    var number = numberSpan ? numberSpan.textContent.trim() : counters.slice(0, level).join(".");
+    if (level === 1) number += ".";
+    var copy = h.cloneNode(true);
+    Array.prototype.forEach.call(copy.querySelectorAll(".header-section-number, .anchorjs-link"),
+      function (x) { x.remove(); });
+    var label = clean(copy.textContent);
+
+    if (level === 1) {
+      currentSectionItem = document.createElement("li");
+      currentSectionItem.appendChild(link(h.id, number, label, "toc-level1"));
+      topList.appendChild(currentSectionItem);
+      currentSubList = null;
+      currentH2List = null;
+    } else {
+      if (!currentSectionItem) {
+        currentSectionItem = document.createElement("li");
+        topList.appendChild(currentSectionItem);
+      }
+      if (!currentSubList) {
+        currentSubList = document.createElement("ul");
+        currentSectionItem.appendChild(currentSubList);
+      }
+      var li = document.createElement("li");
+      li.appendChild(link(h.id, number, label, "toc-level" + level));
+      if (level === 2) {
+        currentSubList.appendChild(li);
+        currentH2List = li;
+      } else {
+        var parentList = currentH2List ? (currentH2List.querySelector(":scope > ul") || currentH2List.appendChild(document.createElement("ul"))) : currentSubList;
+        parentList.appendChild(li);
+      }
+    }
+  });
+  contents.appendChild(topList);
+
+  // Figures and tables, with their captions
+  var figures = [], tables = [], figN = 0, tabN = 0;
+  Array.prototype.forEach.call(document.querySelectorAll("figure, table"), function (el) {
+    if (el.closest("#TOC, .ocean-header, .ocean-footer, pre, .sourceCode")) return;
+    if (el.tagName === "TABLE") {
+      if (el.parentElement.closest("table")) return;
+      tabN++;
+      if (!el.id) el.id = "toc-table-" + tabN;
+      var cap = el.caption && el.caption.textContent.trim() ? el.caption.textContent : "Table " + tabN;
+      tables.push({ id: el.id, label: clean(cap, 110) });
+    } else {
+      if (!el.querySelector("img")) return;
+      figN++;
+      if (!el.id) el.id = "toc-figure-" + figN;
+      var fc = el.querySelector("figcaption");
+      var fcap = fc && fc.textContent.trim() ? fc.textContent : "Figure " + figN;
+      figures.push({ id: el.id, label: clean(fcap, 110) });
+    }
+  });
+
+  function listGroup(title, items) {
+    var details = group(title, items.length);
+    var ul = document.createElement("ul");
+    items.forEach(function (it) {
+      var li = document.createElement("li");
+      li.appendChild(link(it.id, null, it.label, "toc-object"));
+      ul.appendChild(li);
+    });
+    details.appendChild(ul);
+    return details;
+  }
+
+  // Replace the default table of contents
+  var title = document.getElementById("toc-title");
+  toc.innerHTML = "";
+  toc.appendChild(contents);
+  if (figures.length) toc.appendChild(listGroup("Figures", figures));
+  if (tables.length) toc.appendChild(listGroup("Tables", tables));
+
+  // Highlight the section and subsection being read
+  var links = Array.prototype.slice.call(contents.querySelectorAll("a"));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); });
+  function onScroll() {
+    var current = -1;
+    targets.forEach(function (t, i) { if (t && t.getBoundingClientRect().top < 120) current = i; });
+    var active = {};
+    if (current >= 0) {
+      active[current] = true;
+      // parent section of the current subsection
+      for (var k = current; k >= 0; k--) {
+        if (targets[k].tagName === "H1") { active[k] = true; break; }
+      }
+    }
+    links.forEach(function (a, i) { a.classList.toggle("active", !!active[i]); });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // Button to hide or show the sidebar
+  var button = document.createElement("button");
+  button.className = "toc-toggle";
+  button.textContent = "Hide contents";
+  button.addEventListener("click", function () {
+    document.body.classList.toggle("toc-hidden");
+    button.textContent = document.body.classList.contains("toc-hidden") ? "Show contents" : "Hide contents";
+  });
+  document.body.appendChild(button);
+});
+</script>

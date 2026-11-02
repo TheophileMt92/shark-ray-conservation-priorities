@@ -1,10 +1,12 @@
 ---
 title: "Manuscript_gap_analysis"
 author: "Théophile L. Mouton"
-date: "November 5, 2025"
+date: today
+date-format: "D MMMM YYYY"
 format:
   html:
     toc: true
+    number-sections: true
     toc-location: right
     self-contained: true
     code-fold: true
@@ -146,7 +148,7 @@ summary_stats <- data.frame(
   )
 )
 
-kable(summary_stats, caption = "Summary statistics for no-take MPA coverage", digits = 2)
+kable(summary_stats, caption = "Summary statistics for no-take MPA coverage", digits = 2, row.names = FALSE)
 
 # Save results to CSV
 write.csv(results, here::here("R","Data","species_mpa_coverage_NT.csv"), row.names = FALSE)
@@ -277,10 +279,17 @@ nt_map_projected <- ggplot() +
   my_theme
 
 # Print the projected map
+```
+
+```{r}
+#| fig-cap: "Mean percentage of species' ranges covered by no-take MPAs per 0.5-degree grid cell (Fig. 2B)"
 print(nt_map_projected)
+```
+
+```{r}
 
 # Save the projected map (continental waters only)
-ggsave(here::here("R","Outputs","NT_MPA_coverage_continental.png"), nt_map_projected, width = 10, height = 7, dpi = 300)
+ggsave(here::here("R","Outputs","report_coverage_map.png"), nt_map_projected, width = 10, height = 7, dpi = 300)
 
 # Compute statistics
 continental_stats <- data.frame(
@@ -422,14 +431,12 @@ eez_stats <- eez_stats %>%
   arrange(desc(mean_NT_coverage))
 
 # Print summary tables
-cat("Top 10 Realms by Mean No-Take MPA Coverage:\n")
-print(head(realm_stats, 10))
-
-cat("\nTop 10 Ecoregions by Mean No-Take MPA Coverage:\n")
-print(head(ecoregion_stats, 10))
-
-cat("\nTop 10 EEZs by Mean No-Take MPA Coverage:\n")
-print(head(eez_stats, 10))
+knitr::kable(head(realm_stats, 10), digits = 2,
+             caption = "Top 10 marine realms by mean no-take MPA coverage (% of species' ranges per grid cell)")
+knitr::kable(head(ecoregion_stats, 10), digits = 2,
+             caption = "Top 10 marine ecoregions by mean no-take MPA coverage (% of species' ranges per grid cell)")
+knitr::kable(head(eez_stats, 10), digits = 2,
+             caption = "Top 10 EEZs by mean no-take MPA coverage (% of species' ranges per grid cell)")
 
 #======================
 # Create visualizations
@@ -440,11 +447,26 @@ print(head(eez_stats, 10))
 meow_ecos_stats <- meow_ecos %>%
   left_join(ecoregion_stats, by = "ECOREGION")
 
+# Some ecoregion polygons have vertices slightly beyond +/-180 degrees of longitude
+# (e.g. -180.00000000008), which the projection wraps to the other side of the map,
+# creating bands across the globe. Cropping just inside the date line and the poles
+# removes these artefacts before projecting (planar crop on longitude/latitude)
+crop_for_projection <- function(x) {
+  s2_state <- sf::sf_use_s2()
+  suppressMessages(sf::sf_use_s2(FALSE))
+  on.exit(suppressMessages(sf::sf_use_s2(s2_state)))
+  suppressWarnings(sf::st_crop(sf::st_make_valid(x),
+                               xmin = -179.9999, xmax = 179.9999, ymin = -85, ymax = 89.9999))
+}
+
+meow_ecos_stats <- crop_for_projection(meow_ecos_stats)
+
 # Plot ecoregions map
 eco_map <- ggplot() +
   geom_sf(data = meow_ecos_stats, aes(fill = mean_NT_coverage), color = NA) +
   geom_sf(data = ne_countries(scale = "medium", returnclass = "sf"), 
           fill = "lightgrey", color = "darkgrey", size = 0.1) +
+  geom_sf(data = globe_border, fill = NA, color = "black", size = 0.5) +
   scale_fill_viridis_c(
     name = "Mean % range in no-take MPAs",
     na.value = "grey90",
@@ -452,6 +474,7 @@ eco_map <- ggplot() +
     guide = guide_colorbar(barwidth = 20, barheight = 0.5,
                            title.position = "top", title.hjust = 0.5)
   ) +
+  coord_sf(crs = mcbryde_thomas_2, datum = NA) +
   theme_minimal() +
   labs(
     #title = "Mean No-Take MPA Coverage by Marine Ecoregion",
@@ -465,7 +488,15 @@ eco_map <- ggplot() +
   )
 
 # Save ecoregion map
-ggsave(here("R","Outputs", "ecoregion_NT_coverage_map.png"), eco_map, width = 12, height = 8, dpi = 300)
+```
+
+```{r}
+#| fig-cap: "Fig. S2. Mean percentage of species' ranges in no-take MPAs by marine ecoregion"
+print(eco_map)
+```
+
+```{r}
+ggsave(here("R","Outputs", "FigS2_ecoregion_coverage_map.png"), eco_map, width = 12, height = 8, dpi = 300)
 
 # 2. Choropleth map of EEZs
 # Join stats back to spatial data
@@ -495,7 +526,7 @@ eez_map <- ggplot() +
   )
 
 # Save EEZ map
-ggsave(here("R","Outputs", "eez_NT_coverage_map.png"), eez_map, width = 12, height = 8, dpi = 300)
+ggsave(here("R","Outputs", "report_EEZ_coverage_map.png"), eez_map, width = 12, height = 8, dpi = 300)
 
 # 3. Bar plots for top regions
 # Top 20 Ecoregions
@@ -516,7 +547,15 @@ top_eco_plot <- ggplot(head(ecoregion_stats, 20), aes(x = reorder(ECOREGION, mea
   )
 
 # Save top ecoregions plot
-ggsave(here("R","Outputs", "top_ecoregions_NT_coverage.png"), top_eco_plot, width = 10, height = 8, dpi = 300)
+```
+
+```{r}
+#| fig-cap: "Fig. S3. Top 20 marine ecoregions by mean percentage of species' ranges in no-take MPAs"
+print(top_eco_plot)
+```
+
+```{r}
+ggsave(here("R","Outputs", "FigS3_top20_ecoregions_coverage.png"), top_eco_plot, width = 10, height = 8, dpi = 300)
 
 # Bottom 20 Ecoregions
 bottom_eco_plot <- ggplot(tail(ecoregion_stats, 20), aes(x = reorder(ECOREGION, mean_NT_coverage), y = mean_NT_coverage)) +
@@ -536,7 +575,15 @@ bottom_eco_plot <- ggplot(tail(ecoregion_stats, 20), aes(x = reorder(ECOREGION, 
   )
 
 # Save bottom ecoregions plot
-ggsave(here("R","Outputs", "bottom_ecoregions_NT_coverage.png"), bottom_eco_plot, width = 10, height = 8, dpi = 300)
+```
+
+```{r}
+#| fig-cap: "Fig. S4. Bottom 20 marine ecoregions by mean percentage of species' ranges in no-take MPAs"
+print(bottom_eco_plot)
+```
+
+```{r}
+ggsave(here("R","Outputs", "FigS4_bottom20_ecoregions_coverage.png"), bottom_eco_plot, width = 10, height = 8, dpi = 300)
 
 # Top 20 EEZs
 top_eez_plot <- ggplot(head(eez_stats, 20), aes(x = reorder(TERRITORY1, mean_NT_coverage), y = mean_NT_coverage)) +
@@ -556,14 +603,14 @@ top_eez_plot <- ggplot(head(eez_stats, 20), aes(x = reorder(TERRITORY1, mean_NT_
   )
 
 # Save top EEZs plot
-ggsave(here("R","Outputs", "top_eezs_NT_coverage.png"), top_eez_plot, width = 10, height = 8, dpi = 300)
+ggsave(here("R","Outputs", "report_top20_EEZ_coverage.png"), top_eez_plot, width = 10, height = 8, dpi = 300)
 ```
 
 # Null model of MPA placement within EEZs
 
 ## Null model of MPA placement and overlaps with the range of sharks and rays
 
-The null model (100 iterations) is not re-run when rendering this report: its results are saved in `R/Outputs/species_random_No-take MPAs_coverage.csv` and loaded in the next section. Set `eval: true` below to re-run it (results are reproducible, as each iteration uses a fixed seed).
+The null model (100 iterations) is not re-run when rendering this report: its results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded in the next section. Set `eval: true` below to re-run it (results are reproducible, as each iteration uses a fixed seed).
 
 ```{r}
 #| eval: false
@@ -724,7 +771,7 @@ actual_coverage <- read.csv(here::here("R","Data", "species_mpa_coverage_NT.csv"
 colnames(actual_coverage)[2] <- c("NT")
 
 # Load random MPA coverage results
-random_NT <- read.csv(here::here("R","Outputs", "species_random_No-take MPAs_coverage.csv"))
+random_NT <- read.csv(here::here("R","Outputs", "data_null_model_coverage.csv"))
 
 # Reshape actual coverage data to long format (NT only)
 actual_long <- actual_coverage %>%
@@ -813,7 +860,7 @@ significant_species <- function(comparison_data, z_threshold = 1.96) {
   
   # Save as PNG
   save_kable(kable_output,
-             file = here::here("R","Outputs", "significant_species_NT.png"),
+             file = here::here("R","Outputs", "TableS2_top10_SES_species.png"),
              zoom = 2)
   
   return(kable_output)
@@ -867,6 +914,10 @@ stacked_bar_chart <- ggplot(summary_NT, aes(x = 1, y = Percentage, fill = Repres
   )
 
 # Display the plot
+```
+
+```{r fig.height=2.5}
+#| fig-cap: "Percentage of species under-, equally and over-represented in no-take MPAs relative to the null model of MPA placement (Fig. 2C)"
 print(stacked_bar_chart)
 ```
 
@@ -884,7 +935,7 @@ n_under_NT <- nrow(under_represented_NT)
 
 # Save the list of under-represented species to CSV file
 write.csv(under_represented_NT, 
-          here::here("R","Outputs", "under_represented_species_NT_MPAs.csv"), 
+          here::here("R","Outputs", "data_under_represented_species.csv"), 
           row.names = FALSE)
 
 # Create summary data frame with additional information
@@ -895,7 +946,7 @@ under_rep_NT_summary <- under_represented_NT %>%
 
 # Save the enhanced summary data
 write.csv(under_rep_NT_summary, 
-          here::here("R","Outputs", "under_represented_species_NT_MPAs_summary.csv"), 
+          here::here("R","Outputs", "data_under_represented_species_summary.csv"), 
           row.names = FALSE)
 
 ## Compare with IUCN data 
@@ -957,9 +1008,10 @@ summarize_iucn <- function(data, title) {
 all_iucn_summary <- summarize_iucn(all_species_iucn, "All Species")
 under_NT_iucn_summary <- summarize_iucn(under_rep_NT_iucn, "Under-represented (No-take MPAs)")
 
-# Print summaries to check
-print(all_iucn_summary)
-print(under_NT_iucn_summary)
+knitr::kable(all_iucn_summary, digits = 2,
+             caption = "IUCN category composition of all species analysed")
+knitr::kable(under_NT_iucn_summary, digits = 2,
+             caption = "IUCN category composition of species under-represented in no-take MPAs")
 
 # Combine summaries
 combined_iucn_summary <- bind_rows(
@@ -991,10 +1043,17 @@ iucn_plot_NT <- ggplot(combined_iucn_summary, aes(x = IUCN_status, y = percentag
   )
 
 # Print the plot
+```
+
+```{r}
+#| fig-cap: "Fig. S5. IUCN status of species under-represented in no-take MPAs compared with all species analysed"
 print(iucn_plot_NT)
+```
+
+```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs", "under_represented_species_iucn_comparison_NT.png"),
+ggsave(here::here("R","Outputs", "FigS5_under_represented_species_IUCN.png"),
        iucn_plot_NT, width = 10, height = 6, dpi = 300)
 
 # Statistical test: Chi-square test to determine if there are significant differences
@@ -1037,18 +1096,13 @@ contingency_NT <- prepare_contingency(all_iucn_summary, under_NT_iucn_summary)
 rownames(contingency_NT) <- c("All Species", "Under-represented (No-take MPAs)")
 colnames(contingency_NT) <- c("LC", "NT", "VU", "EN", "CR")
 
-# Print contingency table
-cat("Contingency Table - No-take MPAs:\n")
-print(contingency_NT)
-cat("\n")
+knitr::kable(contingency_NT,
+             caption = "Number of species per IUCN category: all species and species under-represented in no-take MPAs")
 
 # Run chi-square test
 chi_test_NT <- chisq.test(contingency_NT)
 
-# Print results
-cat("Chi-square Test - No-take MPAs vs. All Species:\n")
 print(chi_test_NT)
-cat("\n")
 
 # Create a summary table with the IUCN distribution
 iucn_summary_table <- combined_iucn_summary %>%
@@ -1061,7 +1115,7 @@ iucn_summary_table <- combined_iucn_summary %>%
 
 # Save the summary tables
 write.csv(iucn_summary_table,
-          here::here("R","Outputs", "under_represented_species_iucn_summary_NT.csv"),
+          here::here("R","Outputs", "data_under_represented_species_IUCN.csv"),
           row.names = FALSE)
 ```
 
@@ -1188,10 +1242,17 @@ continental_plot_NT <- ggplot() +
   my_theme
 
 # Print the plot
+```
+
+```{r}
+#| fig-cap: "Mean standardised effect size (SES) of no-take MPA coverage per grid cell (Fig. 2D)"
 print(continental_plot_NT)
+```
+
+```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs", "SES_map_continental_NT.png"),
+ggsave(here::here("R","Outputs", "report_SES_map.png"),
        continental_plot_NT,
        width = 10,
        height = 6,
@@ -1226,10 +1287,10 @@ ecoregion_ses_stats <- ses_grid_ecoregions %>%
   arrange(desc(mean_SES))
 
 # Print summary
-cat("Top 10 Ecoregions by Mean SES:\n")
-print(head(ecoregion_ses_stats, 10))
-cat("\nBottom 10 Ecoregions by Mean SES:\n")
-print(tail(ecoregion_ses_stats, 10))
+knitr::kable(head(ecoregion_ses_stats, 10), digits = 2,
+             caption = "Top 10 marine ecoregions by mean standardised effect size (SES) of no-take MPA coverage")
+knitr::kable(tail(ecoregion_ses_stats, 10), digits = 2,
+             caption = "Bottom 10 marine ecoregions by mean standardised effect size (SES) of no-take MPA coverage")
 
 #======================
 # Create SES ecoregion map
@@ -1238,6 +1299,8 @@ print(tail(ecoregion_ses_stats, 10))
 # Join SES stats back to spatial data
 meow_ecos_ses_stats <- meow_ecos %>%
   left_join(ecoregion_ses_stats, by = "ECOREGION")
+
+meow_ecos_ses_stats <- crop_for_projection(meow_ecos_ses_stats)
 
 # Plot ecoregions SES map
 ses_eco_map <- ggplot() +
@@ -1251,7 +1314,8 @@ ses_eco_map <- ggplot() +
     guide = guide_colorbar(barwidth = 20, barheight = 0.5,
                           title.position = "top", title.hjust = 0.5)
   ) +
-  coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE) +
+  geom_sf(data = globe_border, fill = NA, color = "black", size = 0.5) +
+  coord_sf(crs = mcbryde_thomas_2, datum = NA) +
   theme_minimal() +
   labs(
     x = NULL, y = NULL
@@ -1264,9 +1328,15 @@ ses_eco_map <- ggplot() +
   )
 
 # Print and save the map
-cat("Mean SES per ecoregion:\n")
+```
+
+```{r}
+#| fig-cap: "Fig. S6. Mean standardised effect size (SES) of no-take MPA coverage by marine ecoregion"
 print(ses_eco_map)
-ggsave(here("R","Outputs", "ecoregion_SES_map_NT_clean.png"), 
+```
+
+```{r}
+ggsave(here("R","Outputs", "FigS6_ecoregion_SES_map.png"), 
        ses_eco_map, width = 12, height = 8, dpi = 300)
 
 # Top 20 Ecoregions by Mean SES
@@ -1304,19 +1374,31 @@ bottom_ses_plot <- ggplot(tail(ecoregion_ses_stats, 20),
   )
 
 # Print and save plots
-cat("Top 20 Ecoregions by Mean SES:\n")
+```
+
+```{r}
+#| fig-cap: "Fig. S7. Top 20 marine ecoregions by mean SES of no-take MPA coverage"
 print(top_ses_plot)
-ggsave(here("R","Outputs", "top_ecoregions_SES_NT_clean.png"), 
+```
+
+```{r}
+ggsave(here("R","Outputs", "FigS7_top20_ecoregions_SES.png"), 
        top_ses_plot, width = 10, height = 8, dpi = 300)
 
-cat("Bottom 20 Ecoregions by Mean SES:\n")
+```
+
+```{r}
+#| fig-cap: "Fig. S8. Bottom 20 marine ecoregions by mean SES of no-take MPA coverage"
 print(bottom_ses_plot)
-ggsave(here("R","Outputs", "bottom_ecoregions_SES_NT_clean.png"), 
+```
+
+```{r}
+ggsave(here("R","Outputs", "FigS8_bottom20_ecoregions_SES.png"), 
        bottom_ses_plot, width = 10, height = 8, dpi = 300)
 
 # Save ecoregion statistics
 write.csv(ecoregion_ses_stats,
-          here::here("R","Outputs", "ecoregion_SES_stats_NT.csv"),
+          here::here("R","Outputs", "data_ecoregion_SES.csv"),
           row.names = FALSE)
 ```
 
@@ -1366,14 +1448,11 @@ summary_stats_nt <- results_IUCN_filtered %>%
   ) %>%
   arrange(factor(IUCN_status, levels = iucn_order))
 
-print("Summary statistics for No-take MPAs:")
-print(summary_stats_nt)
 
 #======================
 # DETAILED DATA EXPLORATION
 #======================
 
-print("\n1. SUMMARY STATISTICS FOR NO-TAKE MPAs (%):")
 
 # Raw summary statistics for no-take MPAs
 summary_stats_nt <- results_IUCN_filtered %>%
@@ -1391,10 +1470,10 @@ summary_stats_nt <- results_IUCN_filtered %>%
   ) %>%
   arrange(factor(IUCN_status, levels = iucn_order))
 
-print(summary_stats_nt)
+knitr::kable(summary_stats_nt, digits = 2,
+             caption = "No-take MPA coverage (% of range) by IUCN category")
 
 # Check for zeros
-print("\n2. SPECIES WITH ZERO COVERAGE:")
 zero_coverage <- results_IUCN_filtered %>%
   group_by(IUCN_status) %>%
   summarise(
@@ -1403,10 +1482,10 @@ zero_coverage <- results_IUCN_filtered %>%
     .groups = "drop"
   ) %>%
   arrange(factor(IUCN_status, levels = iucn_order))
-print(zero_coverage)
+knitr::kable(zero_coverage, digits = 2,
+             caption = "Number and percentage of species with no range in no-take MPAs, by IUCN category")
 
 # Distribution shape
-print("\n3. DISTRIBUTION SHAPE (Skewness):")
 library(moments)
 
 # Calculate overall skewness
@@ -1429,31 +1508,28 @@ overall_row <- data.frame(
 
 skewness_stats <- rbind(overall_row, skewness_stats)
 
-print(skewness_stats)
+knitr::kable(skewness_stats, digits = 2,
+             caption = "Skewness of no-take MPA coverage, overall and by IUCN category")
 
 #======================
 # STATISTICAL TESTS
 #======================
 
-cat("NON-PARAMETRIC STATISTICAL TESTS\n")
 
 # 1. Jonckheere-Terpstra test
 library(DescTools)
-cat("\n1. JONCKHEERE-TERPSTRA TEST (for ordered alternatives):\n")
 jt_result <- JonckheereTerpstraTest(results_IUCN_filtered$NT, 
                                      results_IUCN_filtered$iucn_GE,
                                      alternative = "decreasing")
 print(jt_result)
 
 # 2. Spearman correlation
-cat("\n2. SPEARMAN RANK CORRELATION:\n")
 spearman_result <- cor.test(results_IUCN_filtered$iucn_GE, 
                              results_IUCN_filtered$NT, 
                              method = "spearman")
 print(spearman_result)
 
 # 3. Kolmogorov-Smirnov test (LC vs CR)
-cat("\n3. KOLMOGOROV-SMIRNOV TEST (LC vs CR):\n")
 ks_result <- ks.test(
   results_IUCN_filtered$NT[results_IUCN_filtered$IUCN_status == "LC"],
   results_IUCN_filtered$NT[results_IUCN_filtered$IUCN_status == "CR"]
@@ -1466,7 +1542,6 @@ print(ks_result)
 
 library(quantreg)
 
-cat("QUANTILE REGRESSION ANALYSIS\n")
 
 # Define quantiles to test
 quantiles <- seq(0.1, 0.9, by = 0.1)
@@ -1476,7 +1551,6 @@ qr_results <- data.frame()
 
 # Fit quantile regression for each quantile
 for (tau in quantiles) {
-  cat(paste("Fitting quantile regression for tau =", tau, "...\n"))
   
   tryCatch({
     qr_model <- rq(NT ~ iucn_GE, tau = tau, data = results_IUCN_filtered)
@@ -1497,7 +1571,6 @@ for (tau in quantiles) {
     )
     
     qr_results <- rbind(qr_results, temp_result)
-    cat("  Success!\n")
     
   }, error = function(e) {
     cat(paste("  Error at tau =", tau, ":", e$message, "\n"))
@@ -1551,7 +1624,7 @@ if (nrow(qr_clean) > 0) {
   
   # Save as PNG
   save_kable(simple_kable,
-             file = here::here("R","Outputs", "simple_kable_quantile results.png"),
+             file = here::here("R","Outputs", "TableS1_quantile_regression.png"),
              zoom = 2)
   #======================
   # FIGURE 1: Distribution plot + Quantile slopes
@@ -1660,8 +1733,6 @@ if (nrow(qr_clean) > 0) {
     font.label = list(size = 14, face = "bold")
   )
   
-  print(fig1_combined)
-  
   ggsave(
     filename = here::here("R","Outputs", "FigS1_quantile_regression.png"),
     plot = fig1_combined,
@@ -1671,6 +1742,15 @@ if (nrow(qr_clean) > 0) {
     bg = "white"
   )
 } # Close the if (nrow(qr_clean) > 0) statement
+
+```
+
+```{r}
+#| fig-cap: "Fig. S1. No-take MPA coverage by IUCN category with quantile regression lines (A) and slopes across quantiles (B)"
+print(fig1_combined)
+```
+
+```{r}
 
 #======================
 # Beta Regression for No-take MPAs
@@ -1696,30 +1776,15 @@ mpa_pred_nt <- predict(mpa_beta_nt,
                        newdata = data.frame(iucn_GE = 0:4),
                        type = "response") * 100
 
-print("Predicted No-take MPA coverage by IUCN category:")
-print(data.frame(
-  Category = 0:4,
+knitr::kable(data.frame(
   IUCN = c("LC", "NT", "VU", "EN", "CR"),
   Predicted_Coverage = round(mpa_pred_nt, 2)
-))
+), col.names = c("IUCN category", "Predicted coverage (%)"),
+caption = "No-take MPA coverage predicted by the beta regression, by IUCN category (exploratory, not reported in the manuscript)")
 
 # Average decrease per category
 avg_decrease_nt <- mean(diff(mpa_pred_nt))
-print(paste("Average decrease per threat category:", round(avg_decrease_nt, 2), "%"))
 
-#Sensitivity analysis
-# Jonckheere-Terpstra test
-library(DescTools)
-jt_result <- JonckheereTerpstraTest(results_IUCN_filtered$NT, 
-                                     results_IUCN_filtered$iucn_GE,
-                                     alternative = "decreasing")
-print(jt_result)
-
-# Spearman correlation
-spearman_result <- cor.test(results_IUCN_filtered$iucn_GE, 
-                             results_IUCN_filtered$NT, 
-                             method = "spearman")
-print(spearman_result)
 
 #======================
 # Ridge Plot with Points - No-take MPAs
@@ -1771,7 +1836,14 @@ rdplot_points <- ggplot(notake_mpa_iucn,
                breaks = seq(0, 50, 10),
                labels = c("0", "10", "20", "30", "40", ""))
 
+```
+
+```{r}
+#| fig-cap: "Percentage of species' range in no-take MPAs by IUCN category (Fig. 2A)"
 print(rdplot_points)
+```
+
+```{r}
 
 # Add white background to the plot
 rdplot_points_white <- rdplot_points + 
@@ -1782,7 +1854,7 @@ rdplot_points_white <- rdplot_points +
 
 # Save PNG with white background
 ggsave(
-  filename = here::here("R","Outputs", "notake_mpa_protection_points.png"),
+  filename = here::here("R","Outputs", "report_coverage_by_IUCN.png"),
   plot = rdplot_points_white,
   width = 6,
   height = 5,
@@ -1791,7 +1863,7 @@ ggsave(
 )
 ```
 
-# Grid of Fig. 1
+# Fig. 2: combined panels
 
 ```{r}
 final_plot_combined = ggpubr::ggarrange(
@@ -1807,10 +1879,10 @@ final_plot_combined = ggpubr::ggarrange(
   vjust = 1,
   hjust = -0.1)
 
-print(final_plot_combined)
+# The figure is displayed below from the saved file, at its final size (8 x 17.35 in)
 
 # Define the output path using `here`
-output_path <- here::here("R","Outputs", "Fig_1_combined_points_4.png")
+output_path <- here::here("R","Outputs", "Fig2_gap_analysis.png")
 
 # Save the final plot using `ggsave`
 ggsave(
@@ -1823,5 +1895,9 @@ ggsave(
 )
 
 # Display the saved image in the Quarto document
-knitr::include_graphics(here::here("R","Outputs", "Fig_1_combined_points_4.png"))
+```
+
+```{r}
+#| fig-cap: "Fig. 2. No-take MPA coverage of elasmobranch ranges: (A) by IUCN category, (B) per grid cell, (C) relative to the null model, (D) standardised effect sizes"
+knitr::include_graphics(here::here("R","Outputs", "Fig2_gap_analysis.png"))
 ```

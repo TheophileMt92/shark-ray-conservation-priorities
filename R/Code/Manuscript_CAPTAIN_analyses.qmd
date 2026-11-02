@@ -1,10 +1,12 @@
 ---
 title: "Manuscript_CAPTAIN_analyses"
 author: "Théophile L. Mouton"
-date: "November 5, 2025"
+date: today
+date-format: "D MMMM YYYY"
 format:
   html:
     toc: true
+    number-sections: true
     toc-location: right
     self-contained: true
     code-fold: true
@@ -248,11 +250,18 @@ CAPTAIN2_IUCN_plot <- ggplot() +
   my_theme_CAPTAIN2_IUCN
 
 # Display the plot
+```
+
+```{r}
+#| fig-cap: "Conservation priorities for the IUCN dimension at a 10% protection target (frequency of selection across 50 CAPTAIN predictions)"
 print(CAPTAIN2_IUCN_plot)
+```
+
+```{r}
 
 # Save the plot
 ggsave(
-  filename = here::here("R","Outputs", "CAPTAIN2_IUCN_priorities_01_2.png"),
+  filename = here::here("R","Outputs", "report_priorities_IUCN.png"),
   plot = CAPTAIN2_IUCN_plot,
   width = 10,
   height = 6,
@@ -376,11 +385,18 @@ CAPTAIN2_FUSE_plot <- ggplot() +
   my_theme_CAPTAIN2_FUSE
 
 # Display the plot
+```
+
+```{r}
+#| fig-cap: "Conservation priorities for the FUSE dimension at a 10% protection target (frequency of selection across 50 CAPTAIN predictions)"
 print(CAPTAIN2_FUSE_plot)
+```
+
+```{r}
 
 # Save the plot
 ggsave(
-  filename = here::here("R","Outputs", "CAPTAIN2_FUSE_priorities_01_2.png"),
+  filename = here::here("R","Outputs", "report_priorities_FUSE.png"),
   plot = CAPTAIN2_FUSE_plot,
   width = 10,
   height = 6,
@@ -515,11 +531,18 @@ CAPTAIN2_EDGE2_plot <- ggplot() +
   my_theme_CAPTAIN2_EDGE2
 
 # Display the plot
+```
+
+```{r}
+#| fig-cap: "Conservation priorities for the EDGE2 dimension at a 10% protection target (frequency of selection across 50 CAPTAIN predictions)"
 print(CAPTAIN2_EDGE2_plot)
+```
+
+```{r}
 
 # Save the plot
 ggsave(
-  filename = here::here("R","Outputs", "CAPTAIN2_2ndrun_EDGE2_priorities_01_2.png"),
+  filename = here::here("R","Outputs", "report_priorities_EDGE2.png"),
   plot = CAPTAIN2_EDGE2_plot,
   width = 10,
   height = 6,
@@ -691,13 +714,28 @@ EDGE2_FUSE_plot <- ggplot() +
   my_theme
 
 # Display all plots
+```
+
+```{r}
+#| fig-cap: "Difference in priority between the IUCN and FUSE prioritisations (IUCN minus FUSE)"
 print(IUCN_FUSE_plot)
+```
+
+```{r}
+#| fig-cap: "Difference in priority between the IUCN and EDGE2 prioritisations (IUCN minus EDGE2)"
 print(IUCN_EDGE2_plot)
+```
+
+```{r}
+#| fig-cap: "Difference in priority between the EDGE2 and FUSE prioritisations (EDGE2 minus FUSE)"
 print(EDGE2_FUSE_plot)
+```
+
+```{r}
 
 # Save all plots
 ggsave(
-  filename = here::here("R","Outputs", "CAPTAIN2_IUCN_minus_FUSE_difference_2.png"),
+  filename = here::here("R","Outputs", "report_difference_IUCN_minus_FUSE.png"),
   plot = IUCN_FUSE_plot,
   width = 10,
   height = 6,
@@ -706,7 +744,7 @@ ggsave(
 )
 
 ggsave(
-  filename = here::here("R","Outputs", "CAPTAIN2_IUCN_minus_EDGE2_difference_2.png"),
+  filename = here::here("R","Outputs", "report_difference_IUCN_minus_EDGE2.png"),
   plot = IUCN_EDGE2_plot,
   width = 10,
   height = 6,
@@ -715,7 +753,7 @@ ggsave(
 )
 
 ggsave(
-  filename = here::here("R","Outputs", "CAPTAIN2_EDGE2_minus_FUSE_difference_2.png"),
+  filename = here::here("R","Outputs", "report_difference_EDGE2_minus_FUSE.png"),
   plot = EDGE2_FUSE_plot,
   width = 10,
   height = 6,
@@ -767,7 +805,6 @@ if(nrow(protected_fractions) == nrow(shark_metrics)) {
     ) %>%
     arrange(original_order)
   
-  cat("Successfully joined datasets with", nrow(combined_data), "species\n")
   
   # Define IUCN categories and order
   iucn_order <- c("LC", "NT", "VU", "EN", "CR")
@@ -983,7 +1020,7 @@ edge2_plot <- combined_data %>%
   #print(combined_plots)
   
   # Save combined plot
-  ggsave(here::here("R","Outputs", "Fig.2_combined_protection_dotplots_2.png"),
+  ggsave(here::here("R","Outputs", "Fig3_protection_by_class.png"),
          combined_plots, width = 20, height = 6, dpi = 150, bg = "white")
 
   #======================
@@ -1012,13 +1049,13 @@ edge2_plot <- combined_data %>%
   edge2_beta <- betareg(EDGE2_protection_beta ~ EDGE2_score, data = model_data)
   
   # View summaries
-  cat("\n=== IUCN Beta Regression ===\n")
+  cat("\nIUCN beta regression\n")
   print(summary(iucn_beta))
   
-  cat("\n=== FUSE Beta Regression ===\n")
+  cat("\nFUSE beta regression\n")
   print(summary(fuse_beta))
   
-  cat("\n=== EDGE2 Beta Regression ===\n")
+  cat("\nEDGE2 beta regression\n")
   print(summary(edge2_beta))
   
   # Get tidy summaries
@@ -1051,7 +1088,7 @@ edge2_plot <- combined_data %>%
   edge2_ame <- edge2_ame_summary$AME * 100
   edge2_ame_se <- edge2_ame_summary$SE * 100
   
-  cat("\n=== Average Marginal Effects (as percentages) ===\n")
+  cat("\nAverage marginal effects (%)\n")
   cat(paste("IUCN AME:", round(iucn_ame, 2), "%, SE:", round(iucn_ame_se, 2), "%\n"))
   cat(paste("FUSE AME:", round(fuse_ame, 2), "%, SE:", round(fuse_ame_se, 2), "%\n"))
   cat(paste("EDGE2 AME:", round(edge2_ame, 2), "%, SE:", round(edge2_ame_se, 2), "%\n"))
@@ -1130,12 +1167,12 @@ edge2_plot <- combined_data %>%
     Pseudo_R2 = c(iucn_r2, fuse_r2, edge2_r2)
   )
   
-  cat("\n=== Comprehensive Beta Regression Summary ===\n")
+  cat("\nSummary of beta regressions\n")
   print(comprehensive_summary)
   
   # Save results
   write.csv(comprehensive_summary,
-            here::here("R","Outputs", "beta_regression_summary.csv"),
+            here::here("R","Outputs", "data_beta_regression.csv"),
             row.names = FALSE)
   
 } else {
@@ -1145,16 +1182,19 @@ edge2_plot <- combined_data %>%
 }
 
   # Display the saved image in the Quarto document
-knitr::include_graphics(here::here("R","Outputs", "Fig.2_combined_protection_dotplots_2.png"))
+```
+
+```{r}
+#| fig-cap: "Fig. 3. Percentage of species' range protected under the 10% prioritisations, by IUCN, FUSE and EDGE2 class"
+knitr::include_graphics(here::here("R","Outputs", "Fig3_protection_by_class.png"))
+```
+
+```{r}
 
 #======================
 # COMPREHENSIVE BETA REGRESSION DIAGNOSTICS FOR CAPTAIN MODELS
 #======================
 
-cat("\n")
-cat(rep("=", 80), "\n", sep="")
-cat("COMPREHENSIVE BETA REGRESSION DIAGNOSTICS FOR CAPTAIN MODELS\n")
-cat(rep("=", 80), "\n", sep="")
 
 library(car)
 library(moments)
@@ -1162,14 +1202,10 @@ library(moments)
 # Function to check all assumptions
 check_captain_beta_comprehensive <- function(data, response_var, predictor_var, model, model_name) {
   
-  cat("\n")
-  cat(rep("=", 70), "\n", sep="")
-  cat("DIAGNOSTICS FOR:", model_name, "\n")
-  cat(rep("=", 70), "\n", sep="")
+  cat("Diagnostics for the", model_name, "model\n")
   
   # 1. Levene's test for homogeneity of variance
   cat("\n1. LEVENE'S TEST (Homogeneity of Variance):\n")
-  cat("-------------------------------------------\n")
   levene_formula <- as.formula(paste(response_var, "~ factor(", predictor_var, ")"))
   levene_result <- leveneTest(levene_formula, data = data)
   print(levene_result)
@@ -1182,7 +1218,6 @@ check_captain_beta_comprehensive <- function(data, response_var, predictor_var, 
   
   # 2. Shapiro-Wilk test on beta regression residuals
   cat("\n2. SHAPIRO-WILK TEST (Normality of Residuals):\n")
-  cat("----------------------------------------------\n")
   dev_resid <- residuals(model, type = "deviance")
   shapiro_test <- shapiro.test(dev_resid)
   cat("W =", round(shapiro_test$statistic, 4), 
@@ -1196,7 +1231,6 @@ check_captain_beta_comprehensive <- function(data, response_var, predictor_var, 
   
   # 3. Skewness by category
   cat("\n3. SKEWNESS (Distribution Shape):\n")
-  cat("---------------------------------\n")
   skewness_stats <- data %>%
     group_by(!!sym(predictor_var)) %>%
     summarise(
@@ -1211,7 +1245,6 @@ check_captain_beta_comprehensive <- function(data, response_var, predictor_var, 
   
   # 4. Zero coverage
   cat("\n4. ZERO COVERAGE:\n")
-  cat("-----------------\n")
   zero_stats <- data %>%
     group_by(!!sym(predictor_var)) %>%
     summarise(
@@ -1227,14 +1260,11 @@ check_captain_beta_comprehensive <- function(data, response_var, predictor_var, 
   
   # 5. Cook's distance (influential points)
   cat("\n5. INFLUENTIAL OBSERVATIONS (Cook's Distance):\n")
-  cat("----------------------------------------------\n")
   cd <- cooks.distance(model)
   influential <- which(cd > 4/length(cd))
   cat("Number of influential points (Cook's D > 4/n):", length(influential), "\n")
   cat("Percentage of influential points:", 
       round(100 * length(influential) / length(cd), 2), "%\n")
-  
-  cat("\n")
   
   # Return summary for table
   return(list(
@@ -1275,10 +1305,6 @@ edge2_diag <- check_captain_beta_comprehensive(
 )
 
 # Create comprehensive summary table
-cat("\n")
-cat(rep("=", 80), "\n", sep="")
-cat("COMPREHENSIVE DIAGNOSTIC SUMMARY\n")
-cat(rep("=", 80), "\n", sep="")
 
 comprehensive_diagnostics <- data.frame(
   Model = c("CAPTAIN IUCN", "CAPTAIN FUSE", "CAPTAIN EDGE2"),
@@ -1307,8 +1333,6 @@ kable(comprehensive_diagnostics,
   column_spec(1, bold = TRUE, width = "150px") %>%
   row_spec(0, bold = TRUE, background = "#f0f0f0") %>%
   column_spec(10, bold = TRUE, color = "#38AB38")
-
-cat("\n")
 
 ```
 
@@ -1392,10 +1416,10 @@ robustness_kable
 
 # Save as PNG
 save_kable(robustness_kable,
-           file = here::here("R", "Outputs", "Table_S3_beta_regression_robustness.png"),
+           file = here::here("R", "Outputs", "TableS3_beta_regression_robustness.png"),
            zoom = 2)
 
-write.csv(robustness, here::here("R", "Outputs", "beta_regression_robustness.csv"),
+write.csv(robustness, here::here("R", "Outputs", "data_beta_regression_robustness.csv"),
           row.names = FALSE)
 ```
 
@@ -1459,8 +1483,6 @@ stats_list <- lapply(thresholds, function(t) {
     )
 })
 threshold_stats <- bind_rows(stats_list)
-
-print(threshold_stats)
 
 # --- 4. Create CUMULATIVE protection bins for inset ---
 # Species reaching AT LEAST each threshold (cumulative, increasing order)
@@ -1625,10 +1647,17 @@ fig2d <- main_plot +
     bottom = 0.02, top = 0.38
   )
 
+```
+
+```{r}
+#| fig-cap: "Percentage of each species' range protected under the IUCN, FUSE and EDGE2 prioritisations (10% target), species sorted by protection"
 print(fig2d)
+```
+
+```{r}
 
 ggsave(
-  here::here("R", "Outputs", "Fig2D_protection_curves_annotated.png"),
+  here::here("R", "Outputs", "report_protection_curves.png"),
   fig2d,
   width = 10, height = 6, dpi = 300, bg = "white"
 )
@@ -1641,15 +1670,16 @@ Now each annotation is:
 IUCN: X%
 FUSE: Y%
 EDGE2: Z%
-# --- 8. Print summary stats ---
-cat("\n=== CUMULATIVE PROTECTION SUMMARY ===\n\n")
-cat("% of species reaching each protection threshold:\n\n")
-print(threshold_stats)
+# --- 8. Summary stats ---
+knitr::kable(threshold_stats,
+             col.names = c("Protected range (%) at least", "IUCN (n)", "FUSE (n)", "EDGE2 (n)",
+                           "IUCN (%)", "FUSE (%)", "EDGE2 (%)"),
+             caption = "Number and percentage of species with at least a given percentage of their range protected under the 10% prioritisations")
 ```
 
 # Manuscript maps
 
-### Individual maps
+## Individual maps
 
 ```{r}
 CAPTAIN2_EDGE2_msmap <- ggplot() +
@@ -1721,11 +1751,11 @@ grid1 <- CAPTAIN2_IUCN_msmap_labeled /
          CAPTAIN2_EDGE2_msmap_labeled
 
 # Save the grids if needed
-ggsave(here::here("R","Outputs", "grid1_maps_continental_2ndrun_new.png"), grid1, width = 8, height = 15, dpi = 300)
+ggsave(here::here("R","Outputs", "report_priority_maps_grid.png"), grid1, width = 8, height = 15, dpi = 300)
 
 ```
 
-### Difference maps
+## Difference maps
 
 ```{r}
 # 1. IUCN - FUSE Difference Map
@@ -1809,11 +1839,11 @@ grid2 <- IUCN_FUSE_msmap_labeled /
          EDGE2_FUSE_msmap_labeled
 
 # Save the grids if needed
-ggsave(here::here("R","Outputs", "grid3_maps_continental_2ndrun.png"), grid2, width = 16, height = 15, dpi = 300)
+ggsave(here::here("R","Outputs", "report_difference_maps_grid.png"), grid2, width = 16, height = 15, dpi = 300)
 
 ```
 
-### Combined individual and difference maps
+## Combined individual and difference maps
 
 ```{r}
 
@@ -1844,7 +1874,7 @@ combined_grid <- grid1 | grid2
 
 # If you want to save it
 ggsave(
-  filename = here::here("R","Outputs", "Fig.3_combined_priority_maps.png"),
+  filename = here::here("R","Outputs", "Fig4_priority_maps.png"),
   plot = combined_grid,
   width = 10,    # Adjust width as needed for two columns
   height = 12,   # Adjust height as needed for three rows
@@ -1853,7 +1883,11 @@ ggsave(
 )
 
 # Display the saved image in the Quarto document
-knitr::include_graphics(here::here("R","Outputs", "Fig.3_combined_priority_maps.png"))
+```
+
+```{r}
+#| fig-cap: "Fig. 4. Conservation priorities for the IUCN, FUSE and EDGE2 dimensions (10% target) and pairwise differences between them"
+knitr::include_graphics(here::here("R","Outputs", "Fig4_priority_maps.png"))
 ```
 
 # Spatial distribution analysis
@@ -1923,7 +1957,9 @@ mnn_summary <- data.frame(
   MNN_sd = c(iucn_mnn$sd, fuse_mnn$sd, edge2_mnn$sd)
 )
 
-print(mnn_summary)
+knitr::kable(mnn_summary, digits = 1,
+             col.names = c("Dimension", "High-priority cells", "Percent", "Mean NND (m)", "SD NND (m)"),
+             caption = "High-priority cells (priority > 0.9) per dimension and their spatial clustering (mean nearest-neighbour distance, NND)")
 ```
 
 # Congruence maps
@@ -1980,9 +2016,16 @@ congruent_map <- ggplot() +
   my_theme_CAPTAIN2_EDGE2
 
 # Display the map
-print(congruent_map)
+```
 
-ggsave(here::here("R","Outputs", "congruent_high_prioritiy_areas_09.png"), 
+```{r}
+#| fig-cap: "Fig. S9. High-priority areas (priority > 0.9) shared by all three dimensions"
+print(congruent_map)
+```
+
+```{r}
+
+ggsave(here::here("R","Outputs", "FigS9_congruence_all_dimensions.png"), 
        congruent_map, 
        width = 10, height = 8, dpi = 300, bg = "white")
 
@@ -2107,21 +2150,21 @@ if (nrow(high_priority_data) > 0) {
   #print(congruence_map)
   #cat("Enhanced congruence plot created successfully!\n")
   
-  # Print summary by category
-  cat("\nBreakdown by congruence category:\n")
+  # Summary by category (displayed below)
   category_counts <- table(plot_data$category)
-  category_percentages <- round(prop.table(category_counts) * 100, 1)
-  
-  for(i in 1:length(category_counts)) {
-    cat(sprintf("%-20s: %4d points (%4.2f%%)\n", 
-                names(category_counts)[i], 
-                category_counts[i], 
-                category_percentages[i]))
-  }
+  congruence_breakdown <- data.frame(
+    Category = names(category_counts),
+    Cells = as.integer(category_counts),
+    Percent = round(100 * as.integer(category_counts) / sum(category_counts), 2)
+  )
   
 } else {
   cat("No valid high priority data to plot\n")
 }
+
+knitr::kable(congruence_breakdown,
+             col.names = c("Category", "High-priority cells", "Percentage of high-priority cells"),
+             caption = "High-priority cells (priority > 0.9) by congruence category among the three dimensions")
 
 # Print summary of congruence patterns
 #cat("\nCongruence Pattern Summary:\n")
@@ -2217,12 +2260,16 @@ congruence_map <- ggplot() +
   ) +
   my_theme_congruence
 
-ggsave(here::here("R","Outputs", "congruent_high_prioritiy_areas_09_all_indices.png"), 
+ggsave(here::here("R","Outputs", "FigS10_congruence_categories.png"), 
        congruence_map, 
        width = 10, height = 8, dpi = 300, bg = "white")
 
 
 # Display both plots
+```
+
+```{r}
+#| fig-cap: "Fig. S10. Congruence of high-priority areas (priority > 0.9) among the IUCN, FUSE and EDGE2 prioritisations"
 print(congruence_map)
 ```
 
@@ -2235,6 +2282,7 @@ priority_threshold <- 0.9
 
 # Planning units: all cells where at least one of the 1,000 species occurs
 tif_files <- list.files(here::here("R", "Data", "tif files continental"), pattern = "\\.tif$", full.names = TRUE)
+terra::terraOptions(progress = 0)
 species_stack <- terra::rast(tif_files)
 species_richness <- terra::app(species_stack > 0, sum, na.rm = TRUE)
 planning_units <- which(terra::values(species_richness)[, 1] > 0)
@@ -2246,7 +2294,6 @@ priorities_pu <- data.frame(PUID = planning_units) %>%
   left_join(CAPTAIN2_IUCN_data %>% dplyr::select(PUID, Priority_IUCN = Priority), by = "PUID") %>%
   mutate(across(starts_with("Priority"), ~ tidyr::replace_na(.x, 0)))
 
-cat("Number of planning units:", nrow(priorities_pu), "\n")
 
 # Create binary vectors for high-priority areas (>0.9)
 fuse_high <- priorities_pu$Priority_FUSE > priority_threshold
@@ -2306,8 +2353,6 @@ randomization_test <- function(index1_high, index2_high, n_permutations = 999) {
 }
 
 # Perform randomization tests
-print("=== STATISTICAL CONGRUENCE ANALYSIS ===")
-cat("Threshold for high-priority areas:", priority_threshold, "\n\n")
 
 set.seed(2025)
 
@@ -2357,8 +2402,6 @@ congruence_results <- data.frame(
   )
 )
 
-print(congruence_results)
-
 # Formatted table (Table S4)
 n_high <- c(FUSE = sum(fuse_high), EDGE2 = sum(edge2_high), IUCN = sum(iucn_high))
 
@@ -2397,10 +2440,180 @@ congruence_kable <- kable(congruence_table,
 congruence_kable
 
 save_kable(congruence_kable,
-           file = here::here("R", "Outputs", "Table_S4_congruence_randomisation.png"),
+           file = here::here("R", "Outputs", "TableS4_congruence_randomisation.png"),
            zoom = 2)
 
-write.csv(congruence_results, here::here("R", "Outputs", "congruence_randomisation_tests.csv"),
+write.csv(congruence_results, here::here("R", "Outputs", "data_congruence_randomisation.csv"),
+          row.names = FALSE)
+```
+
+# Sensitivity to the protection target
+
+CAPTAIN predictions at protection targets of 5%, 20% and 30% of planning units, obtained with the models trained at 10% (50 predictions per target and dimension; D. Silvestro, October 2026). Raw outputs (`Python/captain_budget_sensitivity_runs.zip`) are summarised by `Python/Summarise CAPTAIN 2 budget sensitivity runs.py`, which reads them directly from the zip archive, into `R/Data/CAPTAIN2_budget_sensitivity_priorities.csv` (priority = frequency of selection across the 50 predictions). As these predictions come from models trained at a 10% target, they may be less optimal than solutions from models trained at each target.
+
+## Maps of high-priority areas across protection targets
+
+Each cell is coloured by the smallest protection target at which it is a high-priority area (priority \> 0.9).
+
+```{r}
+budget_priorities <- read.csv(here::here("R", "Data", "CAPTAIN2_budget_sensitivity_priorities.csv"),
+                              check.names = FALSE)
+
+# Grid cell coordinates (PUID = cell number of the 0.5-degree grid)
+grid_coords <- as.data.frame(coordinates(r))
+names(grid_coords) <- c("Longitude", "Latitude")
+grid_coords$PUID <- 1:nrow(grid_coords)
+
+# Priorities at all four targets for each dimension, aligned by PUID
+priorities_targets <- data.frame(PUID = grid_coords$PUID) %>%
+  left_join(budget_priorities, by = "PUID") %>%
+  left_join(CAPTAIN2_IUCN_data %>% dplyr::select(PUID, IUCN_0.1 = Priority), by = "PUID") %>%
+  left_join(CAPTAIN2_FUSE_data %>% dplyr::select(PUID, FUSE_0.1 = Priority), by = "PUID") %>%
+  left_join(CAPTAIN2_EDGE2_data %>% dplyr::select(PUID, EDGE2_0.1 = Priority), by = "PUID") %>%
+  mutate(across(-PUID, ~ tidyr::replace_na(.x, 0))) %>%
+  left_join(grid_coords, by = "PUID")
+
+targets <- c("0.05", "0.1", "0.2", "0.3")
+target_labels <- c("5%", "10%", "20%", "30%")
+target_colours <- c("5%" = "#08306B", "10%" = "#2171B5", "20%" = "#6BAED6", "30%" = "#C6DBEF")
+
+# Smallest target at which each cell is a high-priority area (priority > 0.9)
+first_target <- function(dimension, threshold = 0.9) {
+  high <- sapply(targets, function(t) priorities_targets[[paste0(dimension, "_", t)]] > threshold)
+  first <- apply(high, 1, function(x) if (any(x)) target_labels[which(x)[1]] else NA_character_)
+  factor(first, levels = target_labels)
+}
+
+budget_maps_data <- lapply(c("IUCN", "FUSE", "EDGE2"), function(dimension) {
+  priorities_targets %>%
+    mutate(first_target = first_target(dimension)) %>%
+    filter(!is.na(first_target), !is.na(Longitude), !is.na(Latitude)) %>%
+    arrange(desc(first_target)) %>%
+    st_as_sf(coords = c("Longitude", "Latitude"), crs = crs(r, asText = TRUE)) %>%
+    st_transform(crs = mcbryde_thomas_2)
+})
+names(budget_maps_data) <- c("IUCN", "FUSE", "EDGE2")
+
+# Number of high-priority cells first selected at each target
+budget_counts <- sapply(budget_maps_data, function(x) table(x$first_target))
+knitr::kable(budget_counts, caption = "Number of high-priority cells (priority > 0.9) by smallest protection target")
+
+world_projected_budget <- st_transform(world, crs = mcbryde_thomas_2)
+
+globe_border_budget <- st_polygon(list(rbind(c(-180, -90), c(-180, 90), c(180, 90), c(180, -90), c(-180, -90)))) %>%
+  st_sfc(crs = 4326) %>%
+  smoothr::densify(max_distance = 0.5) %>%
+  st_transform(crs = mcbryde_thomas_2)
+
+budget_map <- function(data, title) {
+  ggplot() +
+    geom_sf(data = data, aes(color = first_target), size = 0.5, alpha = 0.8) +
+    geom_sf(data = world_projected_budget, fill = "lightgrey", color = "lightgrey", linewidth = 0.1) +
+    geom_sf(data = globe_border_budget, fill = NA, color = "lightgrey", linewidth = 0.5) +
+    scale_color_manual(values = target_colours, drop = FALSE,
+                       name = "Smallest protection target at which the cell is a high-priority area",
+                       guide = guide_legend(title.position = "top", title.hjust = 0.5,
+                                            override.aes = list(size = 4, alpha = 1))) +
+    coord_sf(crs = mcbryde_thomas_2, datum = NA) +
+    labs(title = title, x = NULL, y = NULL) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          panel.grid = element_blank(),
+          axis.text = element_blank(),
+          plot.title = element_text(face = "bold"))
+}
+
+budget_maps <- ggpubr::ggarrange(
+  budget_map(budget_maps_data$IUCN, "IUCN"),
+  budget_map(budget_maps_data$FUSE, "FUSE"),
+  budget_map(budget_maps_data$EDGE2, "EDGE2"),
+  ncol = 1, nrow = 3,
+  common.legend = TRUE, legend = "bottom"
+)
+
+ggsave(here::here("R", "Outputs", "FigS16_protection_target_sensitivity_maps.png"),
+       plot = budget_maps, width = 8, height = 14, dpi = 300, bg = "white")
+
+```
+
+```{r}
+#| fig-cap: "High-priority areas (priority > 0.9) coloured by the smallest protection target (5%, 10%, 20% or 30%) at which they become high priority, for IUCN (top), FUSE (middle) and EDGE2 (bottom). Predictions at 5%, 20% and 30% come from models trained at a 10% target"
+knitr::include_graphics(here::here("R", "Outputs", "FigS16_protection_target_sensitivity_maps.png"))
+```
+
+## Species protection, nestedness and congruence across protection targets
+
+Species-level protection at each target is the fraction of each species' range protected, averaged across the 50 predictions (10%: `CAPTAIN2_protected_range_fractions_2ndrun.rds`; 5%, 20% and 30%: `R/Data/CAPTAIN2_budget_sensitivity_protected_range.csv`, species in the same order). Nestedness is the percentage of high-priority cells (priority \> 0.9) at a given target that remain high priority at the next larger target, and congruence is the percentage of cells that are high priority in at least one dimension that are high priority in all three, as in the main analysis.
+
+```{r}
+budget_range <- read.csv(here::here("R", "Data", "CAPTAIN2_budget_sensitivity_protected_range.csv"))
+
+high_cells <- function(dimension, target) {
+  priorities_targets$PUID[priorities_targets[[paste0(dimension, "_", target)]] > 0.9]
+}
+
+target_summary <- do.call(rbind, lapply(c("IUCN", "FUSE", "EDGE2"), function(dimension) {
+  do.call(rbind, lapply(seq_along(targets), function(i) {
+    target <- targets[i]
+    fraction <- if (target == "0.1") protected_fractions[[dimension]] else budget_range[[paste0(dimension, "_", target)]]
+    top_class <- budget_range[[paste0(dimension, "_class")]] == 0
+    cells <- high_cells(dimension, target)
+    retained <- if (i < length(targets)) 100 * mean(cells %in% high_cells(dimension, targets[i + 1])) else NA
+    data.frame(Dimension = dimension,
+               Target = target_labels[i],
+               Mean_protected = 100 * mean(fraction),
+               Top_class_protected = 100 * mean(fraction[top_class]),
+               No_protection = sum(fraction == 0),
+               High_cells = length(cells),
+               Retained = retained)
+  }))
+}))
+
+target_congruence <- data.frame(
+  Target = target_labels,
+  Shared_all = sapply(targets, function(target) {
+    iucn <- high_cells("IUCN", target)
+    fuse <- high_cells("FUSE", target)
+    edge2 <- high_cells("EDGE2", target)
+    100 * length(Reduce(intersect, list(iucn, fuse, edge2))) / length(Reduce(union, list(iucn, fuse, edge2)))
+  })
+)
+
+target_table <- target_summary %>%
+  left_join(target_congruence, by = "Target") %>%
+  mutate(Mean_protected = sprintf("%.1f", Mean_protected),
+         Top_class_protected = sprintf("%.1f", Top_class_protected),
+         High_cells = format(High_cells, big.mark = ","),
+         Retained = ifelse(is.na(Retained), "-", sprintf("%.1f", Retained)),
+         Shared_all = sprintf("%.1f", Shared_all))
+
+target_kable <- kable(target_table,
+      format = "html",
+      col.names = c("Dimension", "Protection target", "Mean range protected (%)",
+                    "Range protected, highest class (%)", "Species with no range protected",
+                    "High-priority cells", "Retained at the next target (%)",
+                    "Shared by all three dimensions (%)"),
+      caption = "Species protection, nestedness and congruence of priorities across protection targets",
+      row.names = FALSE,
+      align = c("l", "c", "c", "c", "c", "c", "c", "c")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = FALSE,
+                position = "center") %>%
+  column_spec(1, bold = TRUE, width = "90px") %>%
+  column_spec(2:8, width = "110px") %>%
+  row_spec(0, bold = TRUE, background = "#f0f0f0") %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  footnote(general = "Range protected is the fraction of each species' range within selected cells, averaged across the 50 predictions. The highest class is Critically Endangered for IUCN and the highest score class for FUSE and EDGE2. High-priority cells have a priority > 0.9. Shared by all three dimensions: percentage of cells that are high priority in at least one dimension that are high priority in all three. Predictions at 5%, 20% and 30% come from the models trained at 10%.",
+           general_title = "Note:")
+
+target_kable
+
+save_kable(target_kable,
+           file = here::here("R", "Outputs", "TableS9_protection_target_sensitivity.png"),
+           zoom = 2)
+
+write.csv(target_summary %>% left_join(target_congruence, by = "Target"),
+          here::here("R", "Outputs", "data_protection_target_sensitivity.csv"),
           row.names = FALSE)
 ```
 
@@ -2569,11 +2782,15 @@ combined_plot <- gridExtra::arrangeGrob(
 )
 
 # Save with dimensions better suited for A4 portrait
-ggsave(here::here("R","Outputs", "Fig.4_All_indices_fishing_bivariate_maps_vertical.png"),
+ggsave(here::here("R","Outputs", "Fig5_priorities_fishing_bivariate.png"),
        combined_plot, width = 8.3, height = 11, dpi = 300, bg = "white") 
 
 # Display the saved image in the Quarto document
-knitr::include_graphics(here::here("R","Outputs", "Fig.4_All_indices_fishing_bivariate_maps_vertical.png"))
+```
+
+```{r}
+#| fig-cap: "Fig. 5. Overlap between conservation priorities and fishing effort (2017-2020) for the IUCN, FUSE and EDGE2 dimensions"
+knitr::include_graphics(here::here("R","Outputs", "Fig5_priorities_fishing_bivariate.png"))
 ```
 
 ## Ecoregion analysis
@@ -2766,11 +2983,18 @@ combined_ecoregion_plots <- ggpubr::ggarrange(
 combined_ecoregion_plots <- combined_ecoregion_plots +
   theme(plot.background = element_rect(fill = "white", color = NA))
 
-ggsave(here::here("R", "Outputs", "Fig.S11_ecoregion_priority_fishing.png"),
+ggsave(here::here("R", "Outputs", "FigS11_ecoregion_priority_fishing.png"),
        combined_ecoregion_plots,
        width = 12, height = 10, dpi = 300, bg = "white")
 
-knitr::include_graphics(here::here("R", "Outputs", "Fig.S11_ecoregion_priority_fishing.png"))
+```
+
+```{r}
+#| fig-cap: "Fig. S11. Mean fishing effort versus mean conservation priority by marine ecoregion"
+knitr::include_graphics(here::here("R", "Outputs", "FigS11_ecoregion_priority_fishing.png"))
+```
+
+```{r}
 
 # Print key ecoregions for results text update
 key_ecoregions <- c(
@@ -2789,24 +3013,27 @@ key_ecoregions <- c(
   "Celtic Seas"
 )
 
-cat("IUCN:\n")
 ecoregion_combined_iucn %>%
   filter(ECOREGION %in% key_ecoregions) %>%
   arrange(desc(mean_priority)) %>%
   dplyr::select(ECOREGION, mean_priority, mean_fishing_hours) %>%
-  print()
+  knitr::kable(digits = c(0, 2, 0),
+               col.names = c("Ecoregion", "Mean priority", "Mean fishing hours (2017-2020)"),
+               caption = "Key ecoregions cited in the Results: mean IUCN priority and mean fishing effort")
 
-cat("\nFUSE:\n")
 ecoregion_combined_fuse %>%
   filter(ECOREGION %in% key_ecoregions) %>%
   arrange(desc(mean_priority)) %>%
   dplyr::select(ECOREGION, mean_priority, mean_fishing_hours) %>%
-  print()
+  knitr::kable(digits = c(0, 2, 0),
+               col.names = c("Ecoregion", "Mean priority", "Mean fishing hours (2017-2020)"),
+               caption = "Key ecoregions cited in the Results: mean FUSE priority and mean fishing effort")
 
-cat("\nEDGE2:\n")
 ecoregion_combined_edge2 %>%
   filter(ECOREGION %in% key_ecoregions) %>%
   arrange(desc(mean_priority)) %>%
   dplyr::select(ECOREGION, mean_priority, mean_fishing_hours) %>%
-  print()
+  knitr::kable(digits = c(0, 2, 0),
+               col.names = c("Ecoregion", "Mean priority", "Mean fishing hours (2017-2020)"),
+               caption = "Key ecoregions cited in the Results: mean EDGE2 priority and mean fishing effort")
 ```

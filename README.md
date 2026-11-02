@@ -42,7 +42,7 @@ Run the steps in the order below. Open `Manuscript repo.Rproj` first so that all
 Combines AIS-based fishing hours from Global Fishing Watch (2017–2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024). SAR detections are normalised by the number of satellite overpasses per cell, and a random forest model is trained on cells with both data sources to predict fishing hours in cells with SAR detections only.
 
 - **Main output:** `R/Data/Predicted_Fishing_Hours_05Deg_normalised.Rdata` (fishing hours aggregated to the 0.5° analysis grid)
-- **Figures:** AIS, SAR and combined fishing maps, random forest performance and feature importance (Supplementary Materials)
+- **Figures and tables:** Figs. S12 to S15 and Tables S5 to S8 (Supplementary Materials)
 - **Supporting report:** `SAR overpass normalization - exploratory analysis.qmd` documents the normalisation of SAR detections by satellite overpass frequency.
 
 The raw AIS and SAR files are not included because of their size. They can be downloaded from the [Global Fishing Watch data portal](https://globalfishingwatch.org/data-download/): fishing effort v2 at 0.1° resolution (2017–2020), and SAR vessel detections (Paolo et al. 2024). The overpass counts and distance-to-port and distance-to-shore rasters were obtained from the same source. Steps 2 to 4 only require the processed output listed above.
@@ -53,7 +53,7 @@ The raw AIS and SAR files are not included because of their size. They can be do
 - **Coverage by IUCN status:** Jonckheere-Terpstra test, Spearman correlation, Kolmogorov-Smirnov test and quantile regression.
 - **Null model:** MPAs randomly placed within each country's EEZ while keeping each country's total protected area (100 iterations). Standardised effect sizes per species, aggregated per grid cell and ecoregion.
 - **Main outputs:** `species_mpa_coverage_NT.csv`, under-represented species tables, and ecoregion and EEZ summaries
-- **Figures:** Fig. 2 (`Fig_1_combined_points_4.png`), Fig. S1 (`FigS1_quantile_regression.png`), and supplementary maps and rankings of coverage and standardised effect sizes by ecoregion and EEZ
+- **Figures and tables:** Fig. 2 (`Fig2_gap_analysis.png`), Figs. S1 to S8 and Tables S1 and S2
 
 ### Step 3. CAPTAIN prioritisation (`Python/captain_script_and_data.zip`)
 
@@ -78,6 +78,8 @@ Prediction outputs (`.npz` files, 50 predictions per model) are summarised with 
 - `Analyse CAPTAIN 2 outputs IUCN 220725.py`, `... FUSE 220725.py`, `... EDGE2 220725.py`: cell-level priority (frequency of selection across predictions), saved as `R/Data/CAPTAIN2_*_full_results_averaged_budget0.1_replicates50.rds`
 - `Extract protect fraction CAPTAIN 2 0.1 budget_2nd run.py`: protected fraction of each species' range, saved as `R/Data/CAPTAIN2_protected_range_fractions_2ndrun.rds`
 
+Sensitivity to the protection target: `captain_budget_sensitivity_runs.zip` contains CAPTAIN predictions at targets of 5%, 20% and 30% (models trained at 10%, 50 predictions per target and dimension). `Summarise CAPTAIN 2 budget sensitivity runs.py` reads them directly from the zip (no need to unzip) and saves the priority of each cell to `R/Data/CAPTAIN2_budget_sensitivity_priorities.csv` and the protected fraction of each species' range (species in alphabetical order, as in the CAPTAIN input) to `R/Data/CAPTAIN2_budget_sensitivity_protected_range.csv`.
+
 The summarised outputs are included in `R/Data/`, so Step 4 can be run without re-running CAPTAIN. To re-run the Python scripts, edit `dir_path` at the top of each script to point to the local CAPTAIN prediction outputs.
 
 ### Step 4. Prioritisation results and overlap with fishing effort (`R/Code/Manuscript_CAPTAIN_analyses.qmd`)
@@ -86,10 +88,11 @@ The summarised outputs are included in `R/Data/`, so Step 4 can be run without r
 - **Validation:** beta regressions of species' range protection against their IUCN, FUSE and EDGE2 classes.
 - **Spatial pattern:** mean nearest-neighbour distances of high-priority cells.
 - **Congruence:** congruence of high-priority areas (priority > 0.9) among dimensions, with randomisation tests.
+- **Sensitivity to the protection target:** high-priority areas, species protection, nestedness and congruence at targets of 5%, 10%, 20% and 30% (Fig. S16 and Table S9).
 - **Overlap with fishing effort:** bivariate maps of priority and fishing effort, and ecoregion-level summaries.
-- **Figures:** Fig. 3 (`Fig.2_combined_protection_dotplots_2.png`), Fig. 4 (`Fig.3_combined_priority_maps.png`), Fig. 5 (`Fig.4_All_indices_fishing_bivariate_maps_vertical.png`), Fig. S9 (`congruent_high_prioritiy_areas_09_all_indices.png`), Fig. S11 (`Fig.S11_ecoregion_priority_fishing.png`)
+- **Figures:** Fig. 3 (`Fig3_protection_by_class.png`), Fig. 4 (`Fig4_priority_maps.png`), Fig. 5 (`Fig5_priorities_fishing_bivariate.png`), Figs. S9 and S10 (`FigS9_congruence_all_dimensions.png`, `FigS10_congruence_categories.png`), Tables S3 and S4, Fig. S11 (`FigS11_ecoregion_priority_fishing.png`)
 
-Note that output file names reflect an earlier figure numbering. The manuscript figure numbers are given above.
+Output files in `R/Outputs/` are named after the manuscript figure or table they correspond to (e.g. `Fig4_priority_maps.png`, `FigS10_congruence_categories.png`, `TableS4_congruence_randomisation.png`). Figures shown only in the reports start with `report_`, and output data tables with `data_`.
 
 ---
 

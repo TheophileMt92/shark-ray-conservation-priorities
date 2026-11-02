@@ -1,10 +1,13 @@
 ---
 title: "Manuscript_fishing_hours"
 author: "Théophile L. Mouton"
-date: "`r Sys.Date()`"
+date: today
+date-format: "D MMMM YYYY"
 format:
   html:
     toc: true
+    number-sections: true
+    shift-heading-level-by: -1
     toc-location: right
     self-contained: true
     code-fold: true
@@ -253,10 +256,17 @@ AIS_data_plot <- ggplot() +
     legend.title = element_text(margin = ggplot2::margin(b = 10))
   )
 
+```
+
+```{r}
+#| fig-cap: "Fig. S12. Industrial fishing effort detected by AIS (2017-2020), excluding the high seas"
 print(AIS_data_plot)
+```
+
+```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs","AIS_fishing_map.png"), 
+ggsave(here::here("R","Outputs","FigS12_AIS_fishing_effort.png"), 
        plot = AIS_data_plot,
        width = 12, 
        height = 8, 
@@ -349,10 +359,17 @@ SAR_data_plot <- ggplot() +
     legend.margin = ggplot2::margin(t = 20, r = 0, b = 0, l = 0),
     legend.title = element_text(margin = ggplot2::margin(b = 10))
   )
+```
+
+```{r}
+#| fig-cap: "Fig. S13. Fishing vessel detections from Sentinel-1 SAR (2017-2020)"
 print(SAR_data_plot)
+```
+
+```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs", "SAR_fishing_map.png"), 
+ggsave(here::here("R","Outputs", "FigS13_SAR_vessel_detections.png"), 
        plot = SAR_data_plot,
        width = 12, 
        height = 8, 
@@ -411,10 +428,17 @@ world_plot <- ggplot() +
   )
 
 # Display the plot
+```
+
+```{r}
+#| fig-cap: "Fig. S14. Cells with fishing detected by AIS only, SAR only, or both (2017-2020), excluding the high seas"
 print(world_plot)
+```
+
+```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs", "AIS_SAR_comparison_map.png"), 
+ggsave(here::here("R","Outputs", "FigS14_AIS_SAR_comparison.png"), 
        plot = world_plot,
        width = 12, 
        height = 8, 
@@ -431,7 +455,7 @@ summary_stats <- combined_data %>%
 table_output <- kable(summary_stats, 
       format = "html", 
       col.names = c("Category", "Number of cells", "Percentage (%)"),
-      caption = "Summary statistics of data categories") %>%
+      caption = "Table S5. Number and percentage of 0.1-degree cells with fishing detected by AIS, SAR or both (2017-2020)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = FALSE, 
                 position = "center") %>%
@@ -441,7 +465,7 @@ table_output <- kable(summary_stats,
 table_output
 
 # Save as PNG
-save_kable(table_output, file = here::here("R","Outputs","summary_stats_table.png"))
+save_kable(table_output, file = here::here("R","Outputs","TableS5_AIS_SAR_detection.png"))
 ```
 
 ## Random forest model
@@ -645,8 +669,6 @@ training_data <- combined_data_with_rasters %>%
     log_detections_per_overpass = log10(detections_per_overpass + 1)
   )
 
-cat("Training data dimensions:", nrow(training_data), "rows,", ncol(training_data), "columns\n")
-cat("Missing values in detections_per_overpass:", sum(is.na(training_data$detections_per_overpass)), "\n")
 
 # ---- Train normalised random forest model ----
 
@@ -769,7 +791,14 @@ violin_plot <- ggplot(plot_data, aes(x = type, y = hours, fill = type)) +
   theme(legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1))
 
+```
+
+```{r}
+#| fig-cap: "Distribution of AIS fishing hours and of fishing hours predicted from normalised SAR detections (SAR-only cells)"
 print(violin_plot)
+```
+
+```{r}
 
 # ---- Maps of predictions ----
 world_map <- map_data("world")
@@ -803,9 +832,16 @@ predicted_plot <- ggplot() +
     legend.title = element_text(margin = ggplot2::margin(b = 10))
   )
 
-print(predicted_plot)
+```
 
-ggsave(here::here("R", "Outputs", "predicted_plot_SAR_normalized.png"),
+```{r}
+#| fig-cap: "Fig. S15. Fishing effort combining AIS data and random forest predictions from SAR detections (2017-2020), excluding the high seas"
+print(predicted_plot)
+```
+
+```{r}
+
+ggsave(here::here("R", "Outputs", "FigS15_combined_fishing_effort.png"),
        plot = predicted_plot,
        width = 12, height = 8, dpi = 300)
 ```
@@ -882,14 +918,21 @@ results_comparison <- data.frame(
   ), 2)
 )
 
-kable(results_comparison, format = "html", digits = 2,
+rf_comparison_table <- kable(results_comparison, format = "html", digits = 2,
       col.names = c("Metric", "No transform", "Fishing hours log",
                     "Predictor log", "Both log"),
-      caption = "Model performance comparison - normalised SAR detections per overpass") %>%
+      caption = "Table S6. Performance of random forest models with different data transformations (normalised SAR detections per overpass)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = FALSE) %>%
   add_header_above(c(" " = 1, "Models" = 4)) %>%
   column_spec(1, bold = TRUE)
+
+rf_comparison_table
+
+# Save as PNG (Table S6)
+save_kable(rf_comparison_table,
+           file = here::here("R", "Outputs", "TableS6_random_forest_comparison.png"),
+           zoom = 2)
 ```
 
 #### Interpretation of model comparison metrics
@@ -936,7 +979,7 @@ results_table <- data.frame(
                 2))
 
 table_output <- kable(results_table, format = "html", digits = 4, 
-      caption = "Model evaluation metrics for log-transformed fishing hours model") %>%
+      caption = "Table S7. Performance metrics of the selected random forest model (log-transformed fishing hours)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = TRUE,
                 position = "center")
@@ -944,11 +987,11 @@ table_output <- kable(results_table, format = "html", digits = 4,
 table_output
 
 # Save as HTML first
-save_kable(table_output, file = here::here("R", "Outputs", "model_evaluation.html"))
+save_kable(table_output, file = here::here("R", "Outputs", "TableS7_selected_model_performance.html"))
 
 # Then screenshot with custom viewport
-invisible(webshot(here::here("R", "Outputs", "model_evaluation.html"), 
-        here::here("R", "Outputs", "model_evaluation.png"),
+invisible(webshot(here::here("R", "Outputs", "TableS7_selected_model_performance.html"), 
+        here::here("R", "Outputs", "TableS7_selected_model_performance.png"),
         vwidth = 800,   # Width in pixels
         vheight = 360,  # Height in pixels - adjust as needed
         zoom = 2))
@@ -966,7 +1009,7 @@ feature_importance <- feature_importance[order(-feature_importance$`%IncMSE`), ]
 # Create the table
 table_output <- kable(feature_importance, format = "html", digits = 2, 
       col.names = c("Feature", "%IncMSE", "IncNodePurity"),
-      caption = "Feature importance for log-transformed fishing hours model") %>%
+      caption = "Table S8. Variable importance in the selected random forest model (log-transformed fishing hours)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = TRUE, position = "center") %>%
   column_spec(1, bold = TRUE) %>%
@@ -975,11 +1018,11 @@ table_output <- kable(feature_importance, format = "html", digits = 2,
 table_output
 
 # Save as HTML first
-save_kable(table_output, file = here::here("R", "Outputs", "feature_importance.html"))
+save_kable(table_output, file = here::here("R", "Outputs", "TableS8_variable_importance.html"))
 
 # Then screenshot with custom viewport
-invisible(webshot(here::here("R", "Outputs", "feature_importance.html"), 
-        here::here("R", "Outputs", "feature_importance.png"),
+invisible(webshot(here::here("R", "Outputs", "TableS8_variable_importance.html"), 
+        here::here("R", "Outputs", "TableS8_variable_importance.png"),
         vwidth = 720,   # Width in pixels
         vheight = 300,  # Height in pixels - adjust as needed
         zoom = 2))
@@ -1042,7 +1085,14 @@ violin_plot <- ggplot(plot_data, aes(x = type, y = hours, fill = type)) +
         axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Print the plot
+```
+
+```{r}
+#| fig-cap: "Distribution of AIS fishing hours and of fishing hours predicted from SAR detections"
 print(violin_plot)
+```
+
+```{r}
 
 # Map of predicted fishing hours only 
 # Prepare the data for the map
@@ -1103,9 +1153,24 @@ asia_map <- create_region_map(map_data, world_map, "lon_std", "lat_std", c(60, 1
 
 # Print the maps
 #print(predicted_SAR_only_plot)
+```
+
+```{r}
+#| fig-cap: "Predicted fishing hours in cells with SAR detections only: Caribbean"
 print(caribbean_map)
+```
+
+```{r}
+#| fig-cap: "Predicted fishing hours in cells with SAR detections only: northern Indian Ocean to eastern Atlantic"
 print(indian_european_map)
+```
+
+```{r}
+#| fig-cap: "Predicted fishing hours in cells with SAR detections only: Asia"
 print(asia_map)
+```
+
+```{r}
 
 #Map of both original and predicted AIS fishing hours 
 # Visualize the results
@@ -1136,10 +1201,17 @@ predicted_plot <- ggplot() +
     legend.title = element_text(margin = ggplot2::margin(b = 10))
   )
 
+```
+
+```{r}
+#| fig-cap: "Fishing effort combining AIS data and random forest predictions from SAR detections (2017-2020), excluding the high seas"
 print(predicted_plot)
+```
+
+```{r}
 
 # Save the plot
-ggsave(here::here("R", "Outputs", "predicted_plot_SAR_only.png"), 
+ggsave(here::here("R", "Outputs", "report_combined_fishing_effort_2.png"), 
        plot = predicted_plot,
        width = 12, 
        height = 8, 
