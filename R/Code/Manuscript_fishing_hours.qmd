@@ -259,14 +259,14 @@ AIS_data_plot <- ggplot() +
 ```
 
 ```{r}
-#| fig-cap: "Fig. S12. Industrial fishing effort detected by AIS (2017-2020), excluding the high seas"
+#| fig-cap: "Fig. S13. Industrial fishing effort detected by AIS (2017-2020), excluding the high seas"
 print(AIS_data_plot)
 ```
 
 ```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs","FigS12_AIS_fishing_effort.png"), 
+ggsave(here::here("R","Outputs","FigS13_AIS_fishing_effort.png"), 
        plot = AIS_data_plot,
        width = 12, 
        height = 8, 
@@ -362,14 +362,14 @@ SAR_data_plot <- ggplot() +
 ```
 
 ```{r}
-#| fig-cap: "Fig. S13. Fishing vessel detections from Sentinel-1 SAR (2017-2020)"
+#| fig-cap: "Fig. S14. Fishing vessel detections from Sentinel-1 SAR (2017-2020)"
 print(SAR_data_plot)
 ```
 
 ```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs", "FigS13_SAR_vessel_detections.png"), 
+ggsave(here::here("R","Outputs", "FigS14_SAR_vessel_detections.png"), 
        plot = SAR_data_plot,
        width = 12, 
        height = 8, 
@@ -431,14 +431,14 @@ world_plot <- ggplot() +
 ```
 
 ```{r}
-#| fig-cap: "Fig. S14. Cells with fishing detected by AIS only, SAR only, or both (2017-2020), excluding the high seas"
+#| fig-cap: "Fig. S15. Cells with fishing detected by AIS only, SAR only, or both (2017-2020), excluding the high seas"
 print(world_plot)
 ```
 
 ```{r}
 
 # Save the plot
-ggsave(here::here("R","Outputs", "FigS14_AIS_SAR_comparison.png"), 
+ggsave(here::here("R","Outputs", "FigS15_AIS_SAR_comparison.png"), 
        plot = world_plot,
        width = 12, 
        height = 8, 
@@ -455,7 +455,7 @@ summary_stats <- combined_data %>%
 table_output <- kable(summary_stats, 
       format = "html", 
       col.names = c("Category", "Number of cells", "Percentage (%)"),
-      caption = "Table S5. Number and percentage of 0.1-degree cells with fishing detected by AIS, SAR or both (2017-2020)") %>%
+      caption = "Table S6. Number and percentage of 0.1-degree cells with fishing detected by AIS, SAR or both (2017-2020)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = FALSE, 
                 position = "center") %>%
@@ -465,7 +465,7 @@ table_output <- kable(summary_stats,
 table_output
 
 # Save as PNG
-save_kable(table_output, file = here::here("R","Outputs","TableS5_AIS_SAR_detection.png"))
+save_kable(table_output, file = here::here("R","Outputs","TableS6_AIS_SAR_detection.png"))
 ```
 
 ## Random forest model
@@ -835,13 +835,13 @@ predicted_plot <- ggplot() +
 ```
 
 ```{r}
-#| fig-cap: "Fig. S15. Fishing effort combining AIS data and random forest predictions from SAR detections (2017-2020), excluding the high seas"
+#| fig-cap: "Fig. S16. Fishing effort combining AIS data and random forest predictions from SAR detections (2017-2020), excluding the high seas"
 print(predicted_plot)
 ```
 
 ```{r}
 
-ggsave(here::here("R", "Outputs", "FigS15_combined_fishing_effort.png"),
+ggsave(here::here("R", "Outputs", "FigS16_combined_fishing_effort.png"),
        plot = predicted_plot,
        width = 12, height = 8, dpi = 300)
 ```
@@ -921,7 +921,7 @@ results_comparison <- data.frame(
 rf_comparison_table <- kable(results_comparison, format = "html", digits = 2,
       col.names = c("Metric", "No transform", "Fishing hours log",
                     "Predictor log", "Both log"),
-      caption = "Table S6. Performance of random forest models with different data transformations (normalised SAR detections per overpass)") %>%
+      caption = "Table S7. Performance of random forest models with different data transformations (normalised SAR detections per overpass)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = FALSE) %>%
   add_header_above(c(" " = 1, "Models" = 4)) %>%
@@ -929,9 +929,9 @@ rf_comparison_table <- kable(results_comparison, format = "html", digits = 2,
 
 rf_comparison_table
 
-# Save as PNG (Table S6)
+# Save as PNG (Table S7)
 save_kable(rf_comparison_table,
-           file = here::here("R", "Outputs", "TableS6_random_forest_comparison.png"),
+           file = here::here("R", "Outputs", "TableS7_random_forest_comparison.png"),
            zoom = 2)
 ```
 
@@ -979,7 +979,7 @@ results_table <- data.frame(
                 2))
 
 table_output <- kable(results_table, format = "html", digits = 4, 
-      caption = "Table S7. Performance metrics of the selected random forest model (log-transformed fishing hours)") %>%
+      caption = "Table S8. Performance metrics of the selected random forest model (log-transformed fishing hours)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = TRUE,
                 position = "center")
@@ -987,11 +987,11 @@ table_output <- kable(results_table, format = "html", digits = 4,
 table_output
 
 # Save as HTML first
-save_kable(table_output, file = here::here("R", "Outputs", "TableS7_selected_model_performance.html"))
+save_kable(table_output, file = here::here("R", "Outputs", "TableS8_selected_model_performance.html"))
 
 # Then screenshot with custom viewport
-invisible(webshot(here::here("R", "Outputs", "TableS7_selected_model_performance.html"), 
-        here::here("R", "Outputs", "TableS7_selected_model_performance.png"),
+invisible(webshot(here::here("R", "Outputs", "TableS8_selected_model_performance.html"), 
+        here::here("R", "Outputs", "TableS8_selected_model_performance.png"),
         vwidth = 800,   # Width in pixels
         vheight = 360,  # Height in pixels - adjust as needed
         zoom = 2))
@@ -1009,7 +1009,7 @@ feature_importance <- feature_importance[order(-feature_importance$`%IncMSE`), ]
 # Create the table
 table_output <- kable(feature_importance, format = "html", digits = 2, 
       col.names = c("Feature", "%IncMSE", "IncNodePurity"),
-      caption = "Table S8. Variable importance in the selected random forest model (log-transformed fishing hours)") %>%
+      caption = "Table S9. Variable importance in the selected random forest model (log-transformed fishing hours)") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = TRUE, position = "center") %>%
   column_spec(1, bold = TRUE) %>%
@@ -1018,11 +1018,11 @@ table_output <- kable(feature_importance, format = "html", digits = 2,
 table_output
 
 # Save as HTML first
-save_kable(table_output, file = here::here("R", "Outputs", "TableS8_variable_importance.html"))
+save_kable(table_output, file = here::here("R", "Outputs", "TableS9_variable_importance.html"))
 
 # Then screenshot with custom viewport
-invisible(webshot(here::here("R", "Outputs", "TableS8_variable_importance.html"), 
-        here::here("R", "Outputs", "TableS8_variable_importance.png"),
+invisible(webshot(here::here("R", "Outputs", "TableS9_variable_importance.html"), 
+        here::here("R", "Outputs", "TableS9_variable_importance.png"),
         vwidth = 720,   # Width in pixels
         vheight = 300,  # Height in pixels - adjust as needed
         zoom = 2))

@@ -1378,7 +1378,7 @@ robustness <- purrr::map_dfr(names(dims), function(d) {
                                        n = sum(keep), Slope = s[1], SE = s[2], p = s[4]))
 })
 
-# Format table for the Supplementary Materials (Table S7)
+# Format table for the Supplementary Materials (Table S3)
 robustness_table <- robustness %>%
   dplyr::mutate(
     Correction = dplyr::recode(Correction,
@@ -2531,14 +2531,14 @@ budget_maps <- ggpubr::ggarrange(
   common.legend = TRUE, legend = "bottom"
 )
 
-ggsave(here::here("R", "Outputs", "FigS16_protection_target_sensitivity_maps.png"),
+ggsave(here::here("R", "Outputs", "FigS12_protection_target_sensitivity_maps.png"),
        plot = budget_maps, width = 8, height = 14, dpi = 300, bg = "white")
 
 ```
 
 ```{r}
 #| fig-cap: "High-priority areas (priority > 0.9) coloured by the smallest protection target (5%, 10%, 20% or 30%) at which they become high priority, for IUCN (top), FUSE (middle) and EDGE2 (bottom). Predictions at 5%, 20% and 30% come from models trained at a 10% target"
-knitr::include_graphics(here::here("R", "Outputs", "FigS16_protection_target_sensitivity_maps.png"))
+knitr::include_graphics(here::here("R", "Outputs", "FigS12_protection_target_sensitivity_maps.png"))
 ```
 
 ## Species protection, nestedness and congruence across protection targets
@@ -2609,7 +2609,7 @@ target_kable <- kable(target_table,
 target_kable
 
 save_kable(target_kable,
-           file = here::here("R", "Outputs", "TableS9_protection_target_sensitivity.png"),
+           file = here::here("R", "Outputs", "TableS5_protection_target_sensitivity.png"),
            zoom = 2)
 
 write.csv(target_summary %>% left_join(target_congruence, by = "Target"),

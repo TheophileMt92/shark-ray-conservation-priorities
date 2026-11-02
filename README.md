@@ -42,7 +42,7 @@ Run the steps in the order below. Open `Manuscript repo.Rproj` first so that all
 Combines AIS-based fishing hours from Global Fishing Watch (2017–2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024). SAR detections are normalised by the number of satellite overpasses per cell, and a random forest model is trained on cells with both data sources to predict fishing hours in cells with SAR detections only.
 
 - **Main output:** `R/Data/Predicted_Fishing_Hours_05Deg_normalised.Rdata` (fishing hours aggregated to the 0.5° analysis grid)
-- **Figures and tables:** Figs. S12 to S15 and Tables S5 to S8 (Supplementary Materials)
+- **Figures and tables:** Figs. S13 to S16 and Tables S6 to S9 (Supplementary Materials)
 - **Supporting report:** `SAR overpass normalization - exploratory analysis.qmd` documents the normalisation of SAR detections by satellite overpass frequency.
 
 The raw AIS and SAR files are not included because of their size. They can be downloaded from the [Global Fishing Watch data portal](https://globalfishingwatch.org/data-download/): fishing effort v2 at 0.1° resolution (2017–2020), and SAR vessel detections (Paolo et al. 2024). The overpass counts and distance-to-port and distance-to-shore rasters were obtained from the same source. Steps 2 to 4 only require the processed output listed above.
@@ -88,7 +88,7 @@ The summarised outputs are included in `R/Data/`, so Step 4 can be run without r
 - **Validation:** beta regressions of species' range protection against their IUCN, FUSE and EDGE2 classes.
 - **Spatial pattern:** mean nearest-neighbour distances of high-priority cells.
 - **Congruence:** congruence of high-priority areas (priority > 0.9) among dimensions, with randomisation tests.
-- **Sensitivity to the protection target:** high-priority areas, species protection, nestedness and congruence at targets of 5%, 10%, 20% and 30% (Fig. S16 and Table S9).
+- **Sensitivity to the protection target:** high-priority areas, species protection, nestedness and congruence at targets of 5%, 10%, 20% and 30% (Fig. S12 and Table S5).
 - **Overlap with fishing effort:** bivariate maps of priority and fishing effort, and ecoregion-level summaries.
 - **Figures:** Fig. 3 (`Fig3_protection_by_class.png`), Fig. 4 (`Fig4_priority_maps.png`), Fig. 5 (`Fig5_priorities_fishing_bivariate.png`), Figs. S9 and S10 (`FigS9_congruence_all_dimensions.png`, `FigS10_congruence_categories.png`), Tables S3 and S4, Fig. S11 (`FigS11_ecoregion_priority_fishing.png`)
 
