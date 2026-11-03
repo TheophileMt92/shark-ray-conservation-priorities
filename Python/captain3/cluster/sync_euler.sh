@@ -17,17 +17,19 @@ DEST="${DEST:-/cluster/home/dsilvestro/captain-ng/shark_data}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"           # Python/captain3
 REPO="$(cd "$HERE/../.." && pwd)"                  # manuscript repository
 TABLE="continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"
+# One SSH connection shared by all transfers, so the login is asked only once
+SSH="ssh -o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-%r@%h:%p -o ControlPersist=10m"
 
 case "${1:-}" in
     push)
-        ssh "$EULER" "mkdir -p '$DEST/captain3' '$DEST/data/tif_files_continental' '$DEST/runs'"
-        rsync -av --exclude 'runs/' --exclude '__pycache__/' "$HERE/" "$EULER:$DEST/captain3/"
-        rsync -av "$REPO/R/Data/tif files continental/" "$EULER:$DEST/data/tif_files_continental/"
-        rsync -av "$REPO/R/Data/$TABLE" "$EULER:$DEST/data/"
+        $SSH "$EULER" "mkdir -p '$DEST/captain3' '$DEST/data/tif_files_continental' '$DEST/runs'"
+        rsync -av -e "$SSH" --exclude 'runs/' --exclude '__pycache__/' "$HERE/" "$EULER:$DEST/captain3/"
+        rsync -av -e "$SSH" "$REPO/R/Data/tif files continental/" "$EULER:$DEST/data/tif_files_continental/"
+        rsync -av -e "$SSH" "$REPO/R/Data/$TABLE" "$EULER:$DEST/data/"
         ;;
     pull)
         mkdir -p "$HERE/runs"
-        rsync -av --exclude 'prepared/' "$EULER:$DEST/runs/" "$HERE/runs/"
+        rsync -av -e "$SSH" --exclude 'prepared/' "$EULER:$DEST/runs/" "$HERE/runs/"
         ;;
     *)
         echo "Usage: $0 push|pull" >&2
