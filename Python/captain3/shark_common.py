@@ -17,9 +17,12 @@ Two reward setups:
                    worst-served 10% of species (soft maximin, as in the AF corridor
                    runs). Needs a reward calibration (calibrate_sharks.py).
 
-Data and outputs: the SDMs are read from R/Data/tif files continental and the species
-table from R/Data; prepare_shark_data.py writes the preprocessed SDMs to
-<SHARK_RUNS_DIR>/prepared. SHARK_RUNS_DIR defaults to Python/captain3/runs (git-ignored).
+Data and outputs: by default the SDMs are read from R/Data/tif files continental and the
+species table from R/Data of the manuscript repository. With SHARK_DATA_DIR set (e.g. on
+the cluster, see cluster/sync_euler.sh) both are read from that folder instead:
+<SHARK_DATA_DIR>/tif_files_continental/ and <SHARK_DATA_DIR>/<species table>.
+prepare_shark_data.py writes the preprocessed SDMs to <SHARK_RUNS_DIR>/prepared;
+SHARK_RUNS_DIR defaults to Python/captain3/runs (git-ignored).
 """
 
 from __future__ import annotations
@@ -44,13 +47,14 @@ import captain as cn  # noqa: E402
 # Paths
 # -----------------------------------------------------------------------------
 REPO_DIR = Path(__file__).resolve().parents[2]
-SDM_DIR = REPO_DIR / "R" / "Data" / "tif files continental"
-TRAIT_FILE = (
-    REPO_DIR
-    / "R"
-    / "Data"
-    / "continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"
-)
+TRAIT_FILE_NAME = "continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"
+if os.environ.get("SHARK_DATA_DIR"):  # standalone copy of the inputs (cluster)
+    DATA_DIR = Path(os.environ["SHARK_DATA_DIR"]).expanduser()
+    SDM_DIR = DATA_DIR / "tif_files_continental"
+else:  # manuscript repository
+    DATA_DIR = REPO_DIR / "R" / "Data"
+    SDM_DIR = DATA_DIR / "tif files continental"
+TRAIT_FILE = DATA_DIR / TRAIT_FILE_NAME
 SPECIES_COL = "Species name"
 RUNS_ROOT = Path(
     os.environ.get("SHARK_RUNS_DIR", REPO_DIR / "Python" / "captain3" / "runs")

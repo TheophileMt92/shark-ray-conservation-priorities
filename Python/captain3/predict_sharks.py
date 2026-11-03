@@ -174,7 +174,7 @@ def main() -> None:
     greedy_idx = np.argsort(-value, kind="stable")[:target]
     episode.rewards.reset()
     env.reset()
-    env.update_protection_matrix(torch.as_tensor(greedy_idx))
+    env.update_protection_matrix(torch.as_tensor(greedy_idx, device=env.device))
     greedy_rewards = term_rewards(episode)
     greedy = np.zeros(grid_shape, dtype=np.float32)
     greedy[rows[greedy_idx], cols[greedy_idx]] = 1

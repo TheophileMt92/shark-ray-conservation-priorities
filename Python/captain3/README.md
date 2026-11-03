@@ -52,9 +52,30 @@ $CPT predict_sharks.py   --metric IUCN --setup protpop
 $CPT predict_sharks.py   --metric IUCN --setup protpop_worst
 ```
 
-Repeat for `FUSE` and `EDGE2`. Run the full runs on the cluster: `cluster/submit_all.sh`
-submits all of them with job dependencies, and `cluster/launch_shark.sh` runs a single
-script.
+Repeat for `FUSE` and `EDGE2`. Run the full runs on the cluster (below).
+
+### Euler
+
+The scripts and inputs are copied to `~/captain-ng/shark_data` (captain-ng and its
+`cpt_venv/` in `~/captain-ng`, as for the AF corridor runs):
+
+```
+~/captain-ng/shark_data/captain3/                  these scripts
+~/captain-ng/shark_data/data/tif_files_continental/  the 1,000 SDMs
+~/captain-ng/shark_data/data/continental_shark_..._categories.csv
+~/captain-ng/shark_data/runs/                      outputs
+```
+
+1. On the laptop, push captain-ng `main`, then copy scripts and data:
+   `bash Python/captain3/cluster/sync_euler.sh push`
+2. On Euler, update captain-ng (`git -C ~/captain-ng pull`) and submit the whole pipeline
+   (data preparation, 3 calibrations, 6 trainings on GPU, 6 predictions, with job
+   dependencies): `bash ~/captain-ng/shark_data/captain3/cluster/submit_all.sh`.
+   `cluster/launch_shark.sh` runs a single script (CPU; add `--gpus=a100:1` for training).
+3. On the laptop, fetch the results into `runs/`: `bash Python/captain3/cluster/sync_euler.sh pull`
+
+The launcher sets `SHARK_DATA_DIR` and `SHARK_RUNS_DIR`, which point the scripts to this
+layout instead of the manuscript repository.
 
 For quick local tests, add `--max-species 60` (a random subset of species) to every
 command, plus e.g. `--epochs 5 --perturbations 4 --keep-weights 3` for training and
