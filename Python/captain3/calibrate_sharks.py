@@ -3,8 +3,14 @@
 
 Runs probe episodes with perturbations of the initial policy and derives one
 multiplier per reward term so that each term varies with a standard deviation of 1
-across probes (EvolStrategiesTrainer.get_reward_calibrated_weights). Training then
-uses --worst-weight as the importance of the worst-served term relative to protpop.
+across probes (EvolStrategiesTrainer.get_reward_calibrated_weights). Only used by runs
+trained with --calibrated, which then use --worst-weight as the importance of the
+calibrated worst-served term relative to protpop.
+
+Caveat: the probes use the untrained policy, which leaves the worst-served species
+almost unprotected, so the worst-served term barely varies and its multiplier comes out
+very large (28-200x that of protpop for the full data). The default protpop_worst runs
+therefore use equal weights on the raw terms instead.
 
 One calibration per metric (the protpop class weights differ between metrics). The
 file name holds a hash of the configuration (shark_common.config_settings), and
@@ -21,9 +27,9 @@ import json
 import time
 
 import numpy as np
-import shark_common as sc
 
 import captain as cn
+import shark_common as sc
 
 
 def main() -> None:

@@ -15,7 +15,11 @@ Two reward setups:
                    (pareto_mlt mode, risk_weights -64 -32 -16 -8 -1), up to a constant.
     protpop_worst  protpop + CalcRewardWorstSpecies: mean protected fraction of the
                    worst-served 10% of species (soft maximin, as in the AF corridor
-                   runs). Needs a reward calibration (calibrate_sharks.py).
+                   runs). Both terms are protected fractions in [0, 1] and are added
+                   with equal weights (--worst-weight). --calibrated scales them by the
+                   calibration of calibrate_sharks.py instead; that calibration is done
+                   with the untrained policy, where the worst-served term is ~0, and
+                   made it count 28-200x more than protpop (first runs, Nov 2026).
 
 Data and outputs: by default the SDMs are read from R/Data/tif files continental and the
 species table from R/Data of the manuscript repository. With SHARK_DATA_DIR set (e.g. on
@@ -88,6 +92,10 @@ HIDDEN_DIM = [32, 16]
 CONVOLUTION = 5  # neighbourhood of protection_matrix_conv (radius 4 cells)
 LEARNING_RATE = 0.2  # initial ES learning rate (x0.99 per epoch), as in the AF runs
 INITIAL_SIGMA = 0.3
+# Floor of the ES noise. The scheduler shrinks sigma while perturbed plans disagree, and
+# with zscore advantages the step size scales as learning rate / sigma: in the first
+# protpop_worst runs sigma fell to ~0.01 and the steps were 4-25x larger than sigma.
+MIN_SIGMA = 0.05
 DEFAULT_SEED = 20251103
 CONFIG_VERSION = 1  # bump when the environment / features change
 
@@ -214,6 +222,44 @@ def static_features(values: np.ndarray, status: np.ndarray) -> tuple[np.ndarray,
     return feats.astype(np.float32), names
 
 
+def greedy_plan(
+    values: np.ndarray,
+    status: np.ndarray,
+    protpop_weight: float,
+    worst_weight: float,
+    target: int,
+    n_steps: int = 200,
+) -> np.ndarray:
+    """Greedy plan for protpop_weight * protpop + worst_weight * worst-served.
+
+    Protects the target in n_steps chunks, each time the cells with the highest marginal
+    gain: their protpop value plus their share of the populations of the currently
+    worst-served species. Exact optimum for protpop alone (a sum over cells); a heuristic
+    (no optimality guarantee) once the worst-served term is included.
+
+    Returns:
+        Indices of the protected planning units.
+    """
+    n_species, n_cells = values.shape
+    share = values / values.sum(axis=1, keepdims=True)
+    pp_value = protpop_cell_value(values, status)
+    k_worst = int(np.ceil(WORST_FRACTION * n_species))
+    protected = np.zeros(n_cells, dtype=bool)
+    frac = np.zeros(n_species)
+    chunk = int(np.ceil(target / n_steps))
+    while protected.sum() < target:
+        score = protpop_weight * pp_value
+        if worst_weight > 0:
+            worst = np.argsort(frac, kind="stable")[:k_worst]
+            score = score + worst_weight * share[worst].sum(axis=0) / k_worst
+        score[protected] = -np.inf
+        n_new = min(chunk, target - int(protected.sum()))
+        new = np.argpartition(-score, n_new)[:n_new]
+        protected[new] = True
+        frac += share[:, new].sum(axis=1)
+    return np.flatnonzero(protected)
+
+
 def protpop_cell_value(values: np.ndarray, status: np.ndarray) -> np.ndarray:
     """protpop reward of protecting each cell alone (rewards add up over cells)."""
     totals = values.sum(axis=1)
@@ -259,7 +305,10 @@ def calibration_file(args) -> Path:
 
 
 def default_run_name(args) -> str:
+    """<metric>_<setup>, protpop_worst with _eq (equal weights) or _cal (calibrated)."""
     name = f"{args.metric}_{args.setup}"
+    if args.setup == "protpop_worst":
+        name += "_cal" if getattr(args, "calibrated", False) else "_eq"
     if args.max_species is not None:
         name += f"_sub{args.max_species}"
     return name
@@ -279,6 +328,12 @@ def add_config_arguments(parser) -> None:
         "--max-species", type=int, default=None, help="random subset of species, for quick tests"
     )
     parser.add_argument("--subset-seed", type=int, default=1)
+    parser.add_argument(
+        "--calibrated",
+        action="store_true",
+        help="protpop_worst: scale the reward terms by the calibration of calibrate_sharks.py "
+        "(default: equal weights on the raw terms); also selects the run name",
+    )
     parser.add_argument("--device", default=None, help="cpu or cuda (default: cuda if available)")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
 

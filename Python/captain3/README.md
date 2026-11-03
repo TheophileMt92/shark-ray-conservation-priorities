@@ -26,9 +26,22 @@ What changed:
     as a reference for how close the trained policy gets.
   - `protpop_worst`: `protpop` plus the mean protected fraction of the 10% worst-served
     species (soft maximin, as in the AF corridor runs; all species count the same in
-    this term). This setup needs a reward calibration per metric, and `--worst-weight`
-    (default 1) sets the importance of the worst-served term relative to `protpop`.
+    this term). Both terms are protected fractions in [0, 1], so they are added with
+    equal weights; `--worst-weight` (default 1) changes the weight of the worst-served
+    term. This objective has no simple optimum: `predict_sharks.py` reports a greedy plan
+    for it as a reference, not as the best possible plan.
+
+    The first runs (Nov 2026, run names `<metric>_protpop_worst`) scaled the two terms
+    with a reward calibration (`calibrate_sharks.py`, still available with
+    `--calibrated`). The calibration probes the untrained policy, which leaves the
+    worst-served species unprotected. That term then barely varies, so its multiplier
+    came out 28-200x larger than for `protpop`. Those runs gave up much of `protpop` and
+    reached only 70-81% of a greedy plan for their own objective.
 - **Training.** Evolution strategies with z-scored advantages (the captain-ng default).
+  The ES noise sigma is kept at or above 0.05 (`--min-sigma`). With z-scored advantages
+  the step size scales as learning rate / sigma. In the first `protpop_worst` runs
+  sigma fell to about 0.01, and the weights moved 4-25x further per epoch than the
+  perturbations explored.
 - **Features.**
   - Recomputed after each decision: species richness, population, species per metric
     class, protected neighbours, and (for `protpop_worst`) cells holding the worst-served
@@ -45,7 +58,6 @@ Use the captain-ng environment, from this folder. The captain-ng version must in
 ```bash
 CPT="uv run --project ~/Software/CAPTAIN/captain-ng python"
 $CPT prepare_shark_data.py                     # once: writes runs/prepared/
-$CPT calibrate_sharks.py --metric IUCN --setup protpop_worst
 $CPT train_sharks.py     --metric IUCN --setup protpop
 $CPT train_sharks.py     --metric IUCN --setup protpop_worst
 $CPT predict_sharks.py   --metric IUCN --setup protpop
@@ -68,9 +80,11 @@ The scripts and inputs are copied to `~/captain-ng/shark_data` (captain-ng and i
 
 1. On the laptop, push captain-ng `main`, then copy scripts and data:
    `bash Python/captain3/cluster/sync_euler.sh push`
-2. On Euler, update captain-ng (`git -C ~/captain-ng pull`) and submit the whole pipeline
-   (data preparation, 3 calibrations, 6 trainings on GPU, 6 predictions, with job
+2. On Euler, update captain-ng (`git -C ~/captain-ng pull`) and submit the runs (data
+   preparation if not done yet, 6 trainings on GPU, 6 predictions, with job
    dependencies): `bash ~/captain-ng/shark_data/captain3/cluster/submit_all.sh`.
+   To run only some of them, set `SETUPS` and/or `METRICS`. For example, rerun the
+   worst-served setup with `SETUPS=protpop_worst bash .../submit_all.sh`.
    The trainings request any GPU with at least 10 GB of memory (`--gpus=1
    --gres=gpumem:10g`, 8 h), which needs much less queueing than an A100.
    `cluster/launch_shark.sh` runs a single script (CPU; add the GPU options for training).
@@ -92,8 +106,10 @@ perturbations of an epoch in sequence on a single environment.
 
 Everything goes to `runs/` (git-ignored; set `SHARK_RUNS_DIR` to put it elsewhere):
 - `prepared/`: preprocessed SDMs.
-- `calibration/`: reward multipliers. The file names include a hash of the configuration.
-- `models/<metric>_<setup>/`:
+- `calibration/`: reward multipliers, only for `--calibrated` runs. The file names include
+  a hash of the configuration.
+- `models/<run name>/`, named `<metric>_protpop`, `<metric>_protpop_worst_eq` (equal
+  weights) or `<metric>_protpop_worst_cal` (calibrated):
   - `settings.json`, `training_log.tsv`, `trained_weights.npy`
   - `weights_history/` (last 50 epochs)
   - `predictions/`:
@@ -106,3 +122,6 @@ Everything goes to `runs/` (git-ignored; set `SHARK_RUNS_DIR` to put it elsewher
     - `species_protection.csv`: protected range and population fractions per species.
     - `greedy_baseline.npz` and `summary.json`: policy vs. greedy rewards, overlap with
       the greedy plan, species with < 10% of their range protected.
+    - `greedy_combined.npz` (`protpop_worst` only): the greedy plan for the run's own
+      weighted objective. `summary.json` also reports the policy's objective as a
+      fraction of this plan's (`policy_objective_vs_greedy`).

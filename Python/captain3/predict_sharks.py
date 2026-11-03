@@ -24,6 +24,11 @@ CAPTAIN 2's sample_weights_from_last_iter) and writes to
                         the cells with the highest protpop value (with populations
                         static the protpop reward is a sum over cells, so this plan
                         maximizes it) and the reward of policy vs. greedy plans
+    greedy_combined.npz (protpop_worst only)
+                        greedy plan for the run's own weighted objective (protpop +
+                        worst-served, with its weights and calibration): a heuristic
+                        reference, not the optimum. summary.json compares the weighted
+                        objective of policy and greedy plan.
 
     python predict_sharks.py --metric IUCN --setup protpop [--replicates 50]
 """
@@ -37,9 +42,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import rasterio
-import shark_common as sc
 import torch
 from rasterio.transform import Affine
+
+import shark_common as sc
 
 
 def write_tif(path: Path, grid2d: np.ndarray, grid_info: dict) -> None:
@@ -168,17 +174,20 @@ def main() -> None:
         }
     ).to_csv(out_dir / "species_protection.csv", index=False)
 
+    def evaluate_plan(cell_idx: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Reward terms and species fractions of a plan (planning-unit indices)."""
+        episode.rewards.reset()
+        env.reset()
+        env.update_protection_matrix(torch.as_tensor(cell_idx, device=env.device))
+        return (term_rewards(episode), *species_fractions(env))
+
     # Greedy reference: the cells with the highest protpop value (optimal for protpop)
     target = episode.budget_manager.total_target
     value = sc.protpop_cell_value(data["values"], status)
     greedy_idx = np.argsort(-value, kind="stable")[:target]
-    episode.rewards.reset()
-    env.reset()
-    env.update_protection_matrix(torch.as_tensor(greedy_idx, device=env.device))
-    greedy_rewards = term_rewards(episode)
+    greedy_rewards, g_range, g_pop = evaluate_plan(greedy_idx)
     greedy = np.zeros(grid_shape, dtype=np.float32)
     greedy[rows[greedy_idx], cols[greedy_idx]] = 1
-    g_range, g_pop = species_fractions(env)
     np.savez_compressed(
         out_dir / "greedy_baseline.npz",
         protection_matrix=greedy,
@@ -204,6 +213,39 @@ def main() -> None:
         "overlap_with_greedy_mean": float(np.mean(overlap)),
         "species_below_10pct_range_protected_mean": float((prot_range_all < 0.1).sum(1).mean()),
     }
+
+    if args.setup == "protpop_worst":
+        # Effective weights of the two terms: reward weights x calibration multipliers
+        rw = settings["reward_weights"]
+        mult = (settings.get("calibration") or {}).get("multipliers") or {}
+        weights = np.array(
+            [rw["protpop"] * mult.get("protpop", 1.0), rw["worst"] * mult.get("worst", 1.0)]
+        )
+        comb_idx = sc.greedy_plan(data["values"], status, weights[0], weights[1], target)
+        comb_rewards, c_range, c_pop = evaluate_plan(comb_idx)
+        comb = np.zeros(grid_shape, dtype=np.float32)
+        comb[rows[comb_idx], cols[comb_idx]] = 1
+        np.savez_compressed(
+            out_dir / "greedy_combined.npz",
+            protection_matrix=comb,
+            protected_range_fraction=c_range,
+            protected_pop_fraction=c_pop,
+            species=data["names"],
+            reward_names=np.array(reward_names),
+            rewards=comb_rewards,
+            objective_weights=weights,
+        )
+        policy_obj = rewards_all @ weights
+        summary.update(
+            {
+                "objective_weights": weights.tolist(),
+                "greedy_combined_rewards": comb_rewards.tolist(),
+                "greedy_combined_objective": float(comb_rewards @ weights),
+                "policy_objective_mean": float(policy_obj.mean()),
+                "policy_objective_vs_greedy": float(policy_obj.mean() / (comb_rewards @ weights)),
+                "greedy_combined_species_below_10pct_range": int((c_range < 0.1).sum()),
+            }
+        )
     with open(out_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
     print(json.dumps(summary, indent=2))

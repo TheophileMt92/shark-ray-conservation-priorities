@@ -1,21 +1,29 @@
 #!/bin/bash
-# Submits the full CAPTAIN 3 shark pipeline on Euler with job dependencies:
-#   data preparation -> calibrations (protpop_worst, one per metric)
-#   -> 6 trainings on GPU (3 metrics x 2 setups) -> 6 predictions
-# All jobs are submitted at once; each starts as soon as the jobs it needs are done:
-# the 3 calibrations and the 3 protpop trainings right after the data preparation, each
-# protpop_worst training after the calibration of its metric, each prediction after its
-# training.
+# Submits CAPTAIN 3 shark runs on Euler with job dependencies:
+#   data preparation (only if not done yet) -> trainings on GPU -> predictions on CPU
+# All jobs are submitted at once; each starts as soon as the job it needs is done.
 #
 #   bash ~/captain-ng/shark_data/captain3/cluster/submit_all.sh [training options]
 #
+# Choose runs with the environment variables SETUPS and METRICS (default: all), e.g.
+# rerun only the worst-served setup:
+#   SETUPS=protpop_worst bash ~/captain-ng/shark_data/captain3/cluster/submit_all.sh
+#
+# protpop_worst uses equal weights on its two reward terms (run names
+# <metric>_protpop_worst_eq). For the calibrated variant run calibrate_sharks.py first and
+# pass --calibrated here and to predict_sharks.py.
+#
 # Extra arguments are passed to every training job, e.g. --epochs 500. Use training-only
-# options there (--epochs, --perturbations, --worst-weight, ...): options that change the
-# configuration (--n-decisions, --max-species) must also be given to calibrate_sharks.py
-# and predict_sharks.py. Job logs (shark_c3_<job id>.out/.err) go to the current folder.
+# options there (--epochs, --perturbations, --worst-weight, --min-sigma, ...): options that
+# change the configuration or run name (--n-decisions, --max-species, --calibrated) must
+# also be given to predict_sharks.py. Job logs (shark_c3_<job id>.out/.err) go to the
+# current folder.
 
 set -e
 L="$(cd "$(dirname "$0")" && pwd)/launch_shark.sh"
+SETUPS="${SETUPS:-protpop protpop_worst}"
+METRICS="${METRICS:-IUCN FUSE EDGE2}"
+RUNS="${SHARK_RUNS_DIR:-${SHARK_DIR:-$HOME/captain-ng/shark_data}/runs}"
 sub() { sbatch --parsable "$@"; }
 # Training: any GPU with >= 10 GB memory (the model needs ~2-3 GB), instead of waiting
 # for an A100. No resume after a timeout: raise --time if runs get close to it.
@@ -28,17 +36,18 @@ sbatch --test-only "${GPU[@]}" "$L" train_sharks.py > /dev/null 2>&1 || {
     exit 1
 }
 
-PREP=$(sub --time=00:30:00 "$L" prepare_shark_data.py)
-echo "prepare: $PREP"
+if [ -f "$RUNS/prepared/sdm_values.npy" ]; then
+    echo "prepared data found in $RUNS/prepared"
+    AFTER_PREP=()
+else
+    PREP=$(sub --time=00:30:00 "$L" prepare_shark_data.py)
+    echo "prepare: $PREP"
+    AFTER_PREP=(--dependency=afterok:$PREP)
+fi
 
-for METRIC in IUCN FUSE EDGE2; do
-    CAL=$(sub --dependency=afterok:$PREP --time=01:00:00 \
-        "$L" calibrate_sharks.py --metric $METRIC --setup protpop_worst)
-    echo "$METRIC calibration: $CAL"
-    for SETUP in protpop protpop_worst; do
-        DEP=$PREP
-        [ $SETUP = protpop_worst ] && DEP=$CAL
-        TRAIN=$(sub --dependency=afterok:$DEP "${GPU[@]}" \
+for METRIC in $METRICS; do
+    for SETUP in $SETUPS; do
+        TRAIN=$(sub "${AFTER_PREP[@]}" "${GPU[@]}" \
             "$L" train_sharks.py --metric $METRIC --setup $SETUP "$@")
         PRED=$(sub --dependency=afterok:$TRAIN --time=02:00:00 \
             "$L" predict_sharks.py --metric $METRIC --setup $SETUP)

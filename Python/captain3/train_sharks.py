@@ -4,8 +4,11 @@
     python train_sharks.py --metric IUCN --setup protpop
     python train_sharks.py --metric IUCN --setup protpop_worst [--worst-weight 1]
 
-protpop_worst needs the calibration of the same configuration (calibrate_sharks.py).
-Results go to <SHARK_RUNS_DIR>/models/<run name> (default name <metric>_<setup>):
+protpop_worst adds the two reward terms (both protected fractions in [0, 1]) with weights
+1 and --worst-weight. With --calibrated the terms are first scaled by the calibration of
+the same configuration (calibrate_sharks.py). The ES noise sigma is kept >= --min-sigma.
+Results go to <SHARK_RUNS_DIR>/models/<run name> (default <metric>_<setup>, with _eq or
+_cal for protpop_worst):
 settings.json, training_log.tsv, trained_weights.npy (last epoch) and
 weights_history/ with the weights of the last --keep-weights epochs, which
 predict_sharks.py uses as replicates (as CAPTAIN 2's sample_weights_from_last_iter).
@@ -24,9 +27,9 @@ import shutil
 import time
 
 import numpy as np
-import shark_common as sc
 
 import captain as cn
+import shark_common as sc
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,7 +39,7 @@ def parse_args() -> argparse.Namespace:
         "--worst-weight",
         type=float,
         default=1.0,
-        help="protpop_worst: weight of the (calibrated) worst-served term, relative to protpop",
+        help="protpop_worst: weight of the worst-served term, relative to protpop",
     )
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument(
@@ -50,6 +53,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--learning-rate", type=float, default=sc.LEARNING_RATE)
     parser.add_argument("--sigma", type=float, default=sc.INITIAL_SIGMA)
+    parser.add_argument(
+        "--min-sigma",
+        type=float,
+        default=sc.MIN_SIGMA,
+        help="floor of the ES noise (with zscore advantages, steps scale as lr / sigma)",
+    )
     parser.add_argument("--advantage-norm", default="zscore", choices=["zscore", "rank", "none"])
     parser.add_argument(
         "--keep-weights",
@@ -78,7 +87,9 @@ def main() -> None:
     history_dir.mkdir(parents=True, exist_ok=True)
 
     calibration = None
-    if args.setup == "protpop_worst":
+    if args.calibrated and args.setup != "protpop_worst":
+        raise ValueError("--calibrated only applies to the protpop_worst setup")
+    if args.calibrated:
         calib_file = sc.calibration_file(args)
         if not calib_file.exists():
             raise FileNotFoundError(
@@ -99,7 +110,9 @@ def main() -> None:
     trainer = cn.EvolStrategiesTrainer(
         runners,
         initial_coeffs=episode.policy.get_flat_weights(),
-        scheduler=cn.LearningScheduler(initial_alpha=args.learning_rate, initial_sigma=args.sigma),
+        scheduler=cn.LearningScheduler(
+            initial_alpha=args.learning_rate, initial_sigma=args.sigma, min_sigma=args.min_sigma
+        ),
         epsilon_reward=0.5,
         n_perturbations=args.perturbations,
         seed=args.seed,
@@ -128,6 +141,7 @@ def main() -> None:
             "perturbations": args.perturbations,
             "learning_rate": args.learning_rate,
             "sigma": args.sigma,
+            "min_sigma": args.min_sigma,
             "advantage_normalization": args.advantage_norm,
             "seed": args.seed,
             "keep_weights": args.keep_weights,
@@ -155,6 +169,8 @@ def main() -> None:
     for epoch in range(args.epochs):
         t0 = time.time()
         avg_reward, summary = trainer.train_epoch()
+        # The scheduler's adaptive (jaccard-based) sigma update may skip its floor
+        trainer.scheduler.sigma = max(trainer.scheduler.sigma, args.min_sigma)
         logger.log_epoch(epoch, avg_reward, summary, time.time() - t0)
         np.save(history_dir / f"epoch_{epoch:04d}.npy", trainer.get_weights())
         old = epoch - args.keep_weights
