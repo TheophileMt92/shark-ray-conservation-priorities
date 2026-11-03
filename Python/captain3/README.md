@@ -71,7 +71,9 @@ The scripts and inputs are copied to `~/captain-ng/shark_data` (captain-ng and i
 2. On Euler, update captain-ng (`git -C ~/captain-ng pull`) and submit the whole pipeline
    (data preparation, 3 calibrations, 6 trainings on GPU, 6 predictions, with job
    dependencies): `bash ~/captain-ng/shark_data/captain3/cluster/submit_all.sh`.
-   `cluster/launch_shark.sh` runs a single script (CPU; add `--gpus=a100:1` for training).
+   The trainings request any GPU with at least 10 GB of memory (`--gpus=1
+   --gres=gpumem:10g`, 8 h), which needs much less queueing than an A100.
+   `cluster/launch_shark.sh` runs a single script (CPU; add the GPU options for training).
 3. On the laptop, fetch the results into `runs/`: `bash Python/captain3/cluster/sync_euler.sh pull`
 
 The launcher sets `SHARK_DATA_DIR` and `SHARK_RUNS_DIR`, which point the scripts to this

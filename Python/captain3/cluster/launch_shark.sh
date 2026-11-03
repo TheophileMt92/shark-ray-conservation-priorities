@@ -11,7 +11,7 @@
 # calibration, prediction); request a GPU for training:
 #   sbatch launch_shark.sh prepare_shark_data.py
 #   sbatch launch_shark.sh calibrate_sharks.py --metric IUCN --setup protpop_worst
-#   sbatch --gpus=a100:1 --time=24:00:00 launch_shark.sh train_sharks.py --metric IUCN --setup protpop
+#   sbatch --gpus=1 --gres=gpumem:10g --time=08:00:00 launch_shark.sh train_sharks.py --metric IUCN --setup protpop
 #   sbatch launch_shark.sh predict_sharks.py --metric IUCN --setup protpop
 # submit_all.sh submits the whole pipeline with job dependencies.
 #
