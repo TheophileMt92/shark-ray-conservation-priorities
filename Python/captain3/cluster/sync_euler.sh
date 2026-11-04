@@ -12,8 +12,8 @@
 # Override the host and folder with EULER and DEST.
 
 set -euo pipefail
-EULER="${EULER:-dsilvestro@euler.ethz.ch}"
-DEST="${DEST:-/cluster/home/dsilvestro/captain-ng/shark_data}"
+EULER="${EULER:-$USER@euler.ethz.ch}"   # default: same user name as on this computer
+DEST="${DEST:-captain-ng/shark_data}"     # relative to the home folder on Euler
 HERE="$(cd "$(dirname "$0")/.." && pwd)"           # Python/captain3
 REPO="$(cd "$HERE/../.." && pwd)"                  # manuscript repository
 TABLE="continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"

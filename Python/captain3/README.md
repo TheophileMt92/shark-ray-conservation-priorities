@@ -68,7 +68,7 @@ Use the captain-ng environment, from this folder. The captain-ng version must in
 `EpisodeRunner(env_dynamics=...)`.
 
 ```bash
-CPT="uv run --project ~/Software/CAPTAIN/captain-ng python"
+CPT="uv run --project /path/to/captain-ng python"
 $CPT prepare_shark_data.py                     # once: writes runs/prepared/
 $CPT train_sharks.py     --metric IUCN --setup protpop
 $CPT train_sharks.py     --metric IUCN --setup protpop_worst

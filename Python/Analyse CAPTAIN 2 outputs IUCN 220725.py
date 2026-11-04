@@ -6,7 +6,7 @@ import pyreadr
 import matplotlib.pyplot as plt
 
 # Directory path containing the .npz files for IUCN
-dir_path = '/Users/theophile_mt/Desktop/Work/University of Zurich/CAPTAIN in Python/outputs/CAPTAIN_2_outputs/iucn_pred_20250720'
+dir_path = 'CAPTAIN_2_outputs/iucn_pred_20250720'  # folder with the CAPTAIN 2 prediction files (.npz)
 
 # Function to process a single .npz file
 def process_file(file_path):

@@ -4,13 +4,13 @@ import pandas as pd
 import pyreadr
 import glob
 
-# Directories containing the .npz files for each index
-edge_dir = '/Users/theophile_mt/Desktop/Work/University of Zurich/CAPTAIN in Python/outputs/CAPTAIN_2_outputs/edge_pred_20250720'
-fuse_dir = '/Users/theophile_mt/Desktop/Work/University of Zurich/CAPTAIN in Python/outputs/CAPTAIN_2_outputs/fuse_pred_20250720'
-iucn_dir = '/Users/theophile_mt/Desktop/Work/University of Zurich/CAPTAIN in Python/outputs/CAPTAIN_2_outputs/iucn_pred_20250720'
+# Directories containing the CAPTAIN 2 prediction files (.npz) for each index
+edge_dir = 'CAPTAIN_2_outputs/edge_pred_20250720'
+fuse_dir = 'CAPTAIN_2_outputs/fuse_pred_20250720'
+iucn_dir = 'CAPTAIN_2_outputs/iucn_pred_20250720'
 
 # Directory containing the input TIF files with species names
-input_dir = '/Users/theophile_mt/Desktop/Work/University of Zurich/CAPTAIN in Python/Data/tif files continental'
+input_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'R', 'Data', 'tif files continental')
 
 # Function to extract protected_range_fraction from all files in a directory
 def extract_protected_fractions(dir_path):
