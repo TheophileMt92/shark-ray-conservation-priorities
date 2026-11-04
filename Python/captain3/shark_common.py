@@ -96,6 +96,14 @@ INITIAL_SIGMA = 0.3
 # with zscore advantages the step size scales as learning rate / sigma: in the first
 # protpop_worst runs sigma fell to ~0.01 and the steps were 4-25x larger than sigma.
 MIN_SIGMA = 0.05
+# Weight annealing of the worst-served term (protpop_worst). The term averages the 10%
+# least protected species, so it is exactly 0, with no training signal, while more than
+# 10% of the species are unprotected. Plans that maximize protpop leave 141-149 species
+# unprotected for FUSE and EDGE2, and with equal weights from the start those runs
+# never left them. Training starts with a large weight on the term and lowers it
+# geometrically to --worst-weight over the first ANNEAL_EPOCHS epochs.
+WORST_WEIGHT_START = 100.0
+ANNEAL_EPOCHS = 100
 DEFAULT_SEED = 20251103
 CONFIG_VERSION = 1  # bump when the environment / features change
 
@@ -304,11 +312,27 @@ def calibration_file(args) -> Path:
     )
 
 
+def annealing(args) -> bool:
+    """Whether the worst-served weight is annealed (protpop_worst only)."""
+    return args.setup == "protpop_worst" and args.worst_weight_start != args.worst_weight
+
+
+def worst_weight_factor(args, epoch: int) -> float:
+    """Multiplier of the worst-served weight at an epoch: from start/final down to 1."""
+    if not annealing(args) or epoch >= args.anneal_epochs:
+        return 1.0
+    ratio = args.worst_weight_start / args.worst_weight
+    return float(ratio ** (1.0 - epoch / args.anneal_epochs))
+
+
 def default_run_name(args) -> str:
-    """<metric>_<setup>, protpop_worst with _eq (equal weights) or _cal (calibrated)."""
+    """<metric>_<setup>; protpop_worst adds _eq (equal weights) or _cal (calibrated), and
+    _anneal when the worst-served weight is annealed."""
     name = f"{args.metric}_{args.setup}"
     if args.setup == "protpop_worst":
         name += "_cal" if getattr(args, "calibrated", False) else "_eq"
+        if annealing(args):
+            name += "_anneal"
     if args.max_species is not None:
         name += f"_sub{args.max_species}"
     return name
@@ -334,6 +358,20 @@ def add_config_arguments(parser) -> None:
         help="protpop_worst: scale the reward terms by the calibration of calibrate_sharks.py "
         "(default: equal weights on the raw terms); also selects the run name",
     )
+    parser.add_argument(
+        "--worst-weight",
+        type=float,
+        default=1.0,
+        help="protpop_worst: weight of the worst-served term, relative to protpop",
+    )
+    parser.add_argument(
+        "--worst-weight-start",
+        type=float,
+        default=WORST_WEIGHT_START,
+        help="protpop_worst: initial weight of the worst-served term, lowered geometrically "
+        "to --worst-weight over --anneal-epochs (set equal to --worst-weight to disable)",
+    )
+    parser.add_argument("--anneal-epochs", type=int, default=ANNEAL_EPOCHS)
     parser.add_argument("--device", default=None, help="cpu or cuda (default: cuda if available)")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
 

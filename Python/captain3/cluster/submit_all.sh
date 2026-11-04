@@ -9,14 +9,16 @@
 # rerun only the worst-served setup:
 #   SETUPS=protpop_worst bash ~/captain-ng/shark_data/captain3/cluster/submit_all.sh
 #
-# protpop_worst uses equal weights on its two reward terms (run names
-# <metric>_protpop_worst_eq). For the calibrated variant run calibrate_sharks.py first and
-# pass --calibrated here and to predict_sharks.py.
+# protpop_worst uses equal weights on its two reward terms, after annealing the
+# worst-served weight from 100 to 1 over the first 100 epochs (run names
+# <metric>_protpop_worst_eq_anneal). For the calibrated variant run calibrate_sharks.py
+# first and pass --calibrated here and to predict_sharks.py.
 #
 # Extra arguments are passed to every training job, e.g. --epochs 500. Use training-only
 # options there (--epochs, --perturbations, --worst-weight, --min-sigma, ...): options that
-# change the configuration or run name (--n-decisions, --max-species, --calibrated) must
-# also be given to predict_sharks.py. Job logs (shark_c3_<job id>.out/.err) go to the
+# change the configuration or run name (--n-decisions, --max-species, --calibrated, and
+# --worst-weight / --worst-weight-start when they switch annealing off) must also be
+# given to predict_sharks.py. Job logs (shark_c3_<job id>.out/.err) go to the
 # current folder.
 
 set -e

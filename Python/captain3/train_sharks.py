@@ -6,7 +6,12 @@
 
 protpop_worst adds the two reward terms (both protected fractions in [0, 1]) with weights
 1 and --worst-weight. With --calibrated the terms are first scaled by the calibration of
-the same configuration (calibrate_sharks.py). The ES noise sigma is kept >= --min-sigma.
+the same configuration (calibrate_sharks.py). The worst-served weight starts at
+--worst-weight-start (default 100) and is lowered geometrically to --worst-weight over the
+first --anneal-epochs (default 100), so that training gets a signal from the
+worst-served species before protpop pulls all protection onto the high-priority ones
+(see shark_common.WORST_WEIGHT_START). Its multiplier per epoch is logged in
+worst_weight.tsv. The ES noise sigma is kept >= --min-sigma.
 Results go to <SHARK_RUNS_DIR>/models/<run name> (default <metric>_<setup>, with _eq or
 _cal for protpop_worst):
 settings.json, training_log.tsv, trained_weights.npy (last epoch) and
@@ -35,12 +40,6 @@ import shark_common as sc
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sc.add_config_arguments(parser)
-    parser.add_argument(
-        "--worst-weight",
-        type=float,
-        default=1.0,
-        help="protpop_worst: weight of the worst-served term, relative to protpop",
-    )
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument(
         "--perturbations", type=int, default=30, help="ES perturbations evaluated per epoch"
@@ -89,6 +88,9 @@ def main() -> None:
     calibration = None
     if args.calibrated and args.setup != "protpop_worst":
         raise ValueError("--calibrated only applies to the protpop_worst setup")
+    annealing_on = sc.annealing(args)
+    if annealing_on and (args.worst_weight_start <= 0 or args.anneal_epochs < 1):
+        raise ValueError("--worst-weight-start must be > 0 and --anneal-epochs >= 1")
     if args.calibrated:
         calib_file = sc.calibration_file(args)
         if not calib_file.exists():
@@ -121,6 +123,23 @@ def main() -> None:
     if calibration is not None:
         trainer.load_reward_calibration(calib_file)
         print(f"Rewards calibrated with {calib_file.name}: {calibration}")
+    if annealing_on:
+        # Annealing sets the reward multipliers each epoch: calibration x schedule
+        base_multipliers = (
+            np.array([calibration["protpop"], calibration["worst"]])
+            if calibration is not None
+            else np.ones(2)
+        )
+        if trainer._use_pool:
+            print(
+                "Warning: with several CPU workers the per-epoch multipliers are sent through "
+                "the worker pool, which does not guarantee that every worker receives them; "
+                "use --workers 1 or a GPU"
+            )
+        print(
+            f"Worst-served weight annealed from {args.worst_weight_start:g} to "
+            f"{args.worst_weight:g} over {args.anneal_epochs} epochs"
+        )
 
     config = sc.config_settings(args)
     settings = {
@@ -131,6 +150,16 @@ def main() -> None:
             "protpop": 1.0,
             **({"worst": args.worst_weight} if args.setup == "protpop_worst" else {}),
         },
+        "worst_weight_annealing": (
+            {
+                "start": args.worst_weight_start,
+                "final": args.worst_weight,
+                "epochs": args.anneal_epochs,
+                "schedule": "geometric",
+            }
+            if annealing_on
+            else None
+        ),
         "calibration": (
             {"file": calib_file.name, "multipliers": calibration}
             if calibration is not None
@@ -168,6 +197,13 @@ def main() -> None:
     t_start = time.time()
     for epoch in range(args.epochs):
         t0 = time.time()
+        if annealing_on:
+            factor = sc.worst_weight_factor(args, epoch)
+            trainer.calibrate_reward_scales(base_multipliers * np.array([1.0, factor]))
+            with open(run_dir / "worst_weight.tsv", "a") as f:
+                if epoch == 0:
+                    f.write("epoch\tworst_weight\n")
+                f.write(f"{epoch}\t{args.worst_weight * factor:.6g}\n")
         avg_reward, summary = trainer.train_epoch()
         # The scheduler's adaptive (jaccard-based) sigma update may skip its floor
         trainer.scheduler.sigma = max(trainer.scheduler.sigma, args.min_sigma)

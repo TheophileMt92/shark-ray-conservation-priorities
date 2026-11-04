@@ -37,6 +37,18 @@ What changed:
     worst-served species unprotected. That term then barely varies, so its multiplier
     came out 28-200x larger than for `protpop`. Those runs gave up much of `protpop` and
     reached only 70-81% of a greedy plan for their own objective.
+
+    **Weight annealing.** With equal weights from the start, the FUSE and EDGE2 runs
+    (`<metric>_protpop_worst_eq`) converged to the pure `protpop` plan. That plan
+    leaves 141-149 species with no protection. The worst-served term averages the 100
+    least protected species, so it stayed exactly 0 and gave no training signal. IUCN
+    was just below that limit (94 species), so it learned both terms and reached 98% of
+    the greedy plan. Training now starts with weight 100 on the worst-served term and
+    lowers it geometrically to `--worst-weight` (1) over the first 100 epochs
+    (`--worst-weight-start`, `--anneal-epochs`; run names `..._eq_anneal`). The reward
+    in `training_log.tsv` follows the annealed weights during that phase, so compare the
+    `r_protpop` and `r_worst` columns instead; `worst_weight.tsv` lists the weight per
+    epoch.
 - **Training.** Evolution strategies with z-scored advantages (the captain-ng default).
   The ES noise sigma is kept at or above 0.05 (`--min-sigma`). With z-scored advantages
   the step size scales as learning rate / sigma. In the first `protpop_worst` runs
@@ -108,8 +120,9 @@ Everything goes to `runs/` (git-ignored; set `SHARK_RUNS_DIR` to put it elsewher
 - `prepared/`: preprocessed SDMs.
 - `calibration/`: reward multipliers, only for `--calibrated` runs. The file names include
   a hash of the configuration.
-- `models/<run name>/`, named `<metric>_protpop`, `<metric>_protpop_worst_eq` (equal
-  weights) or `<metric>_protpop_worst_cal` (calibrated):
+- `models/<run name>/`, named `<metric>_protpop` or `<metric>_protpop_worst_` +
+  `eq` (equal weights) / `cal` (calibrated), + `_anneal` (annealed worst-served weight,
+  the default):
   - `settings.json`, `training_log.tsv`, `trained_weights.npy`
   - `weights_history/` (last 50 epochs)
   - `predictions/`:
