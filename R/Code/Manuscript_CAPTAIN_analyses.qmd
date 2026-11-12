@@ -892,6 +892,20 @@ if(nrow(protected_fractions) == nrow(shark_metrics)) {
       suffix = c("_captain", "_original")
     ) %>%
     arrange(original_order)
+
+  # Protection relative to the maximum achievable under the 10% target. A species whose range is larger than
+  # the number of protected cells can at most have (target / range size) of its range protected, so the
+  # protected fraction of wide-ranging species is capped regardless of their class. Dividing by this maximum
+  # removes the cap (Fig. 3); the unadjusted fraction is analysed with range size as a covariate in Table S3
+  target_cells <- 5432  # 10% of the 54,329 planning units, as in the CAPTAIN predictions
+  species_range <- read.csv(here::here("R", "Data", "CAPTAIN3", "species_range_cells.csv"))
+  combined_data <- combined_data %>%
+    left_join(species_range, by = c("Species_original" = "Species")) %>%
+    mutate(max_protectable = pmin(1, target_cells / range_cells),
+           IUCN_rel = pmin(1, IUCN_captain / max_protectable),
+           FUSE_rel = pmin(1, FUSE_captain / max_protectable),
+           EDGE2_rel = pmin(1, EDGE2_captain / max_protectable))
+  stopifnot(!any(is.na(combined_data$range_cells)))
   
   
   # Define IUCN categories and order
@@ -957,7 +971,7 @@ edge2_colors <- c(
 iucn_plot <- combined_data %>%
   mutate(
     IUCN_status = factor(IUCN_original, levels = 1:5, labels = iucn_order),
-    protection_percentage = IUCN_captain * 100
+    protection_percentage = IUCN_rel * 100
   ) %>%
   ggplot(aes(x = IUCN_status, y = protection_percentage)) +
   geom_jitter(aes(color = IUCN_status),
@@ -980,7 +994,7 @@ iucn_plot <- combined_data %>%
   color = "black") +
   labs(
     x = "IUCN Red List threat status",
-    y = "Range protected (%)"
+    y = "Range protected relative to\nmaximum achievable (%)"
   ) +
   theme_minimal() +
   theme(
@@ -1003,7 +1017,7 @@ iucn_plot <- combined_data %>%
 fuse_plot <- combined_data %>%
   mutate(
     FUSE_category = factor(FUSE_original),
-    protection_percentage = FUSE_captain * 100
+    protection_percentage = FUSE_rel * 100
   ) %>%
   ggplot(aes(x = FUSE_category, y = protection_percentage)) +
   geom_jitter(aes(color = FUSE_category),
@@ -1026,7 +1040,7 @@ fuse_plot <- combined_data %>%
   color = "black") +
   labs(
     x = "FUSE Score",
-    y = "Range protected (%)"
+    y = "Range protected relative to\nmaximum achievable (%)"
   ) +
   theme_minimal() +
   theme(
@@ -1049,7 +1063,7 @@ fuse_plot <- combined_data %>%
 edge2_plot <- combined_data %>%
   mutate(
     EDGE2_category = factor(EDGE2_original),
-    protection_percentage = EDGE2_captain * 100
+    protection_percentage = EDGE2_rel * 100
   ) %>%
   ggplot(aes(x = EDGE2_category, y = protection_percentage)) +
   geom_jitter(aes(color = EDGE2_category),
@@ -1072,7 +1086,7 @@ edge2_plot <- combined_data %>%
   color = "black") +
   labs(
     x = "EDGE2 Score",
-    y = "Range protected (%)"
+    y = "Range protected relative to\nmaximum achievable (%)"
   ) +
   theme_minimal() +
   theme(
@@ -1121,9 +1135,13 @@ edge2_plot <- combined_data %>%
       IUCN_status = IUCN_original,
       FUSE_score = FUSE_original,
       EDGE2_score = EDGE2_original,
-      IUCN_protection = IUCN_captain * 100,
-      FUSE_protection = FUSE_captain * 100,
-      EDGE2_protection = EDGE2_captain * 100,
+      IUCN_protection = IUCN_rel * 100,
+      FUSE_protection = FUSE_rel * 100,
+      EDGE2_protection = EDGE2_rel * 100,
+      IUCN_protection_raw = IUCN_captain * 100,
+      FUSE_protection_raw = FUSE_captain * 100,
+      EDGE2_protection_raw = EDGE2_captain * 100,
+      log_range = log(range_cells),
       # Convert to (0,1) scale and handle boundaries
       n_obs = n(),
       IUCN_protection_beta = (IUCN_protection/100 * (n_obs - 1) + 0.5) / n_obs,
@@ -1273,7 +1291,7 @@ edge2_plot <- combined_data %>%
 ```
 
 ```{r}
-#| fig-cap: "Fig. 3. Percentage of species' range protected under the 10% prioritisations, by IUCN, FUSE and EDGE2 class"
+#| fig-cap: "Fig. 3. Percentage of species' range protected under the 10% prioritisations, relative to the maximum achievable under the 10% target, by IUCN, FUSE and EDGE2 class"
 knitr::include_graphics(file.path(out_dir, "Fig3_protection_by_class.png"))
 ```
 
@@ -1465,8 +1483,19 @@ robustness <- purrr::map_dfr(names(dims), function(d) {
   keep <- y_raw > 0 & y_raw < 1
   m <- betareg::betareg(y_raw[keep] ~ x[keep])
   s <- summary(m)$coefficients$mean[2, ]
-  dplyr::bind_rows(res, tibble::tibble(Dimension = d, Correction = "Exclude 0 and 1",
-                                       n = sum(keep), Slope = s[1], SE = s[2], p = s[4]))
+  # Unadjusted range protected, without and with log range size as a covariate
+  y_unadj <- sv(model_data[[paste0(d, "_protection_raw")]] / 100, nrow(model_data))
+  m_raw <- betareg::betareg(y_unadj ~ x)
+  s_raw <- summary(m_raw)$coefficients$mean["x", ]
+  m_range <- betareg::betareg(y_unadj ~ x + model_data$log_range)
+  s_range <- summary(m_range)$coefficients$mean["x", ]
+  dplyr::bind_rows(res,
+                   tibble::tibble(Dimension = d, Correction = "Exclude 0 and 1",
+                                  n = sum(keep), Slope = s[1], SE = s[2], p = s[4]),
+                   tibble::tibble(Dimension = d, Correction = "Range protected, unadjusted",
+                                  n = length(y_raw), Slope = s_raw[1], SE = s_raw[2], p = s_raw[4]),
+                   tibble::tibble(Dimension = d, Correction = "Range protected, with log range size",
+                                  n = length(y_raw), Slope = s_range[1], SE = s_range[2], p = s_range[4]))
 })
 
 # Format table for the Supplementary Materials (Table S3)
@@ -1500,7 +1529,7 @@ robustness_kable <- kable(robustness_table,
   row_spec(which(robustness_table$Correction == "S&V, n = 1,000"),
            background = "#f5f9ff") %>%
   collapse_rows(columns = 1, valign = "top") %>%
-  footnote(general = "Slopes on the logit scale. S&V: Smithson & Verkuilen correction, y' = (y(n - 1) + 0.5)/n. Highlighted rows correspond to the correction used in the main analysis.",
+  footnote(general = "Slopes on the logit scale. The response is the protected fraction of each species' range relative to the maximum achievable under the 10% target, except in the last two rows of each dimension, which use the unadjusted protected fraction without and with log range size (number of cells) as a covariate (S&V correction, n = 1,000). S&V: Smithson & Verkuilen correction, y' = (y(n - 1) + 0.5)/n. Highlighted rows correspond to the correction used in the main analysis.",
            general_title = "Note:")
 
 robustness_kable

@@ -1,5 +1,5 @@
 ---
-title: "Manuscript_fishing_hours"
+title: "Global fishing effort from AIS and SAR data"
 author: "Théophile L. Mouton"
 date: today
 date-format: "D MMMM YYYY"
@@ -672,7 +672,7 @@ training_data <- combined_data_with_rasters %>%
 # ---- Train normalised random forest models ----
 # The four models are trained in parallel (one per core) and saved to R/Data/rf_norm_*.rds.
 # Set retrain_models to FALSE to load the saved models instead of training them again.
-retrain_models <- TRUE
+retrain_models <- FALSE
 
 model_formulas <- list(
   rf_norm_no_transform = total_fishing_hours ~ detections_per_overpass + lon_std + lat_std + dist_shore + dist_ports + bathy,
@@ -943,13 +943,15 @@ save_kable(rf_comparison_table,
 
 #### Interpretation of model comparison metrics
 
-Four model variants were compared to identify the optimal transformation strategy for normalised SAR detections per overpass. The results clearly favour log-transforming the response variable (fishing hours).
+Four model variants were compared to identify the optimal transformation strategy for normalised SAR detections per overpass. The main difference is whether the response variable (fishing hours) is log-transformed. Log-transforming a predictor has almost no effect in a random forest, because splits only depend on the rank order of predictor values.
 
-The fishing hours log and both-log models achieve the highest R-squared (0.77) and the lowest MAPE (85.64% and 86.25% respectively), compared to over 1,780% for models without response transformation. The median absolute error is similarly improved, dropping from \~33 hours to \~12 hours with log transformation of the response. Log-transforming the predictor (detections per overpass) alone provides no meaningful improvement over the no-transform version across any metric.
+All metrics are computed from out-of-bag predictions, i.e. each cell is predicted only by the trees that were not trained on it, and on the original scale (fishing hours).
 
-The fishing hours log model (log_total_fishing_hours \~ detections_per_overpass) is selected as the final model. It performs marginally better than the both-log variant on MAPE (85.64% vs 86.25%) and RMSE (1413 vs 1415), and is simpler to interpret since the predictor remains on its original scale.
+Models with a log-transformed response have a much lower mean absolute percentage error (411% and 405%) and median absolute error (27 hours) than models without response transformation (MAPE over 2,900%, median absolute error 63 hours), because they predict low-effort cells much better. Their R-squared on the original scale is lower (0.67-0.68 vs 0.77), as the largest values weigh most in this metric. As expected, log-transforming the predictor (detections per overpass) makes almost no difference.
 
-Compared to the previous non-normalised model (R-squared = 0.82, MAPE = 69.71%), performance is slightly reduced. This is expected: normalisation by overpass frequency removes a spurious signal that the original model was exploiting, namely systematic variation in detection counts driven by uneven satellite coverage rather than true differences in fishing intensity. The normalised model is therefore preferred on methodological grounds despite the modest reduction in predictive accuracy.
+The fishing hours log model (log_total_fishing_hours ~ detections_per_overpass) is selected as the final model. It performs almost identically to the both-log variant (R-squared 0.67 vs 0.68, MAPE 411% vs 405%) and is simpler to interpret, since the predictor remains on its original scale. Back-transformed predictions from the log model under-predict on average (mean residual of 313 hours), so fishing effort in SAR-only cells is likely underestimated, making our estimates conservative.
+
+The previous version of this report took the R-squared from the out-of-bag predictions on the log scale (0.77 for the selected model) and computed the error metrics from predictions on the training data (MAPE 85.64%), which overestimated the accuracy of the predictions in fishing hours. The out-of-bag values above are the ones reported in the manuscript.
 
 ### Selected Model performance
 

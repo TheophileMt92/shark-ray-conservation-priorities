@@ -1,5 +1,5 @@
 ---
-title: "Manuscript_data_preparation"
+title: "Data preparation: species table and conservation metrics"
 author: "Théophile L. Mouton"
 date: today
 date-format: "D MMMM YYYY"
