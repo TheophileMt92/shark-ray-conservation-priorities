@@ -19,12 +19,30 @@ format:
     include-after-body: ../Quarto_template/footer_uzh.html
     theme: none
     output-file: "Manuscript_CAPTAIN_analyses.html"
+params:
+  reward: "protpop_worst"
 editor: visual
 execute:
   warning: false
   message: false
   echo: true
 ---
+
+# About this version
+
+This report summarises the CAPTAIN 3 prioritisations run in November 2026 (D. Silvestro) with the corrected species table (`R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`). Three models (IUCN, FUSE, EDGE2) were trained for 300 epochs at a 10% protection target, with class weights 1, 8, 16, 32 and 64, and 50 predictions per model (policies saved at epochs 250 to 299). Two reward systems were tested:
+
+-   `protpop`: maximises the mean protected fraction of species ranges, weighted by class (equivalent to the CAPTAIN 2 reward).
+-   `protpop_worst`: adds a second reward favouring the protection of the worst-served species (those with little or no protection), regardless of their class.
+
+The raw outputs (`Python/captain3_models.zip`) are summarised by `Python/Summarise CAPTAIN 3 outputs.py` into `R/Data/CAPTAIN3/`. The reward system is set with the `reward` parameter of this report. To render both versions:
+
+```         
+quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop_worst -M output-file:Manuscript_CAPTAIN_analyses_protpop_worst.html
+quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop -M output-file:Manuscript_CAPTAIN_analyses_protpop.html
+```
+
+Figures and tables are saved in `R/Outputs/CAPTAIN3_<reward>/`. The sensitivity analysis to the protection target is not run, as the 5%, 20% and 30% predictions have not yet been produced with the corrected species table.
 
 # Load libraries
 
@@ -61,14 +79,19 @@ library(kableExtra)
 # Load the data
 
 ```{r}
-# Read the CAPTAIN2 EDGE2 RDS file
-CAPTAIN2_EDGE2_data <- readRDS(here::here("R/Data/CAPTAIN2_EDGE_full_results_averaged_budget0.1_replicates50.rds"))
+# Reward system and output folder
+reward <- params$reward
+out_dir <- here::here("R", "Outputs", paste0("CAPTAIN3_", reward))
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
-# Read the CAPTAIN2 FUSE RDS file
-CAPTAIN2_FUSE_data <- readRDS(here::here("R/Data/CAPTAIN2_FUSE_res_full_results_averaged_budget0.1_replicates50.rds"))
-
-# Read the CAPTAIN2 IUCN RDS file
-CAPTAIN2_IUCN_data <- readRDS(here::here("R/Data/CAPTAIN2_IUCN_full_results_averaged_budget0.1_replicates50.rds"))
+# Cell priorities (frequency of selection across the 50 predictions), one file per dimension
+# (object names kept from the CAPTAIN 2 version of the report)
+read_priority <- function(dim) {
+  read.csv(here::here("R", "Data", "CAPTAIN3", paste0("CAPTAIN3_", dim, "_", reward, "_priority_budget0.1_replicates50.csv")))
+}
+CAPTAIN2_IUCN_data <- read_priority("IUCN")
+CAPTAIN2_FUSE_data <- read_priority("FUSE")
+CAPTAIN2_EDGE2_data <- read_priority("EDGE2")
 
 # Load one of your input raster files to extract the correct grid structure
 # Use the same raster file for consistency
@@ -83,7 +106,7 @@ if (!file.exists(raster_file)) {
 r <- raster(raster_file)
 
 # Read the protected range fractions RDS file
-protected_fractions <- readRDS(here::here("R","Data", "CAPTAIN2_protected_range_fractions_2ndrun.rds"))
+protected_fractions <- read.csv(here::here("R", "Data", "CAPTAIN3", paste0("CAPTAIN3_", reward, "_protected_range_fractions.csv")))
 
 # Read the continental shark conservation metrics CSV file
 shark_metrics <- read_csv(here::here("R","Data", "continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"))
@@ -240,6 +263,7 @@ CAPTAIN2_IUCN_plot <- ggplot() +
   scale_color_gradientn(
     colors = c("white", "yellow", "darkblue"),
     values = c(0, 0.5, 1),
+    limits = c(0, 1),
     name = "Priority",
     guide = guide_colorbar(barwidth = 20, barheight = 0.5, 
                          title.position = "top", title.hjust = 0.5)
@@ -261,7 +285,7 @@ print(CAPTAIN2_IUCN_plot)
 
 # Save the plot
 ggsave(
-  filename = here::here("R","Outputs", "report_priorities_IUCN.png"),
+  filename = file.path(out_dir, "report_priorities_IUCN.png"),
   plot = CAPTAIN2_IUCN_plot,
   width = 10,
   height = 6,
@@ -375,6 +399,7 @@ CAPTAIN2_FUSE_plot <- ggplot() +
   scale_color_gradientn(
     colors = c("white", "yellow", "darkblue"),
     values = c(0, 0.5, 1),
+    limits = c(0, 1),
     name = "Priority",
     guide = guide_colorbar(barwidth = 20, barheight = 0.5, 
                          title.position = "top", title.hjust = 0.5)
@@ -396,7 +421,7 @@ print(CAPTAIN2_FUSE_plot)
 
 # Save the plot
 ggsave(
-  filename = here::here("R","Outputs", "report_priorities_FUSE.png"),
+  filename = file.path(out_dir, "report_priorities_FUSE.png"),
   plot = CAPTAIN2_FUSE_plot,
   width = 10,
   height = 6,
@@ -521,6 +546,7 @@ CAPTAIN2_EDGE2_plot <- ggplot() +
   scale_color_gradientn(
     colors = c("white", "yellow", "darkblue"),
     values = c(0, 0.5, 1),
+    limits = c(0, 1),
     name = "Priority",
     guide = guide_colorbar(barwidth = 20, barheight = 0.5, 
                          title.position = "top", title.hjust = 0.5)
@@ -542,7 +568,7 @@ print(CAPTAIN2_EDGE2_plot)
 
 # Save the plot
 ggsave(
-  filename = here::here("R","Outputs", "report_priorities_EDGE2.png"),
+  filename = file.path(out_dir, "report_priorities_EDGE2.png"),
   plot = CAPTAIN2_EDGE2_plot,
   width = 10,
   height = 6,
@@ -735,7 +761,7 @@ print(EDGE2_FUSE_plot)
 
 # Save all plots
 ggsave(
-  filename = here::here("R","Outputs", "report_difference_IUCN_minus_FUSE.png"),
+  filename = file.path(out_dir, "report_difference_IUCN_minus_FUSE.png"),
   plot = IUCN_FUSE_plot,
   width = 10,
   height = 6,
@@ -744,7 +770,7 @@ ggsave(
 )
 
 ggsave(
-  filename = here::here("R","Outputs", "report_difference_IUCN_minus_EDGE2.png"),
+  filename = file.path(out_dir, "report_difference_IUCN_minus_EDGE2.png"),
   plot = IUCN_EDGE2_plot,
   width = 10,
   height = 6,
@@ -753,13 +779,72 @@ ggsave(
 )
 
 ggsave(
-  filename = here::here("R","Outputs", "report_difference_EDGE2_minus_FUSE.png"),
+  filename = file.path(out_dir, "report_difference_EDGE2_minus_FUSE.png"),
   plot = EDGE2_FUSE_plot,
   width = 10,
   height = 6,
   dpi = 300,
   bg = "white"
 )
+```
+
+# Comparison of the two reward systems
+
+Mean protected fraction of species ranges by class, and number of species with little or no protection, for the two reward systems (`protpop` and `protpop_worst`). This section is identical in both versions of the report.
+
+```{r}
+species_classes <- read_csv(here::here("R","Data", "continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv"),
+                            show_col_types = FALSE) %>%
+  rename(Species = `Species name`) %>%
+  pivot_longer(c(IUCN, FUSE, EDGE2), names_to = "Dimension", values_to = "Class")
+
+reward_comparison <- bind_rows(lapply(c("protpop", "protpop_worst"), function(rw) {
+  read.csv(here::here("R", "Data", "CAPTAIN3", paste0("CAPTAIN3_", rw, "_protected_range_fractions.csv"))) %>%
+    pivot_longer(c(IUCN, FUSE, EDGE2), names_to = "Dimension", values_to = "Protected") %>%
+    mutate(Reward = rw)
+})) %>%
+  left_join(species_classes, by = c("Species", "Dimension")) %>%
+  mutate(Dimension = factor(Dimension, levels = c("IUCN", "FUSE", "EDGE2")))
+
+class_table <- reward_comparison %>%
+  group_by(Dimension, Reward, Class) %>%
+  summarise(Protected = round(100 * mean(Protected), 1), .groups = "drop") %>%
+  pivot_wider(names_from = Class, values_from = Protected, names_prefix = "Class ") %>%
+  arrange(Dimension, Reward)
+
+kable(class_table, caption = "Mean protected fraction of species ranges (%) by class (1 = lowest, 5 = highest)",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+
+poorly_protected <- reward_comparison %>%
+  group_by(Dimension, Reward) %>%
+  summarise(`0%` = sum(Protected == 0), `< 5%` = sum(Protected < 0.05),
+            `< 10%` = sum(Protected < 0.1), `< 15%` = sum(Protected < 0.15), .groups = "drop") %>%
+  arrange(Dimension, Reward)
+
+kable(poorly_protected, caption = "Number of species (out of 1,000) by protected fraction of their range",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+```{r}
+#| fig-cap: "Mean protected fraction of species ranges by class (± standard error) for the two reward systems"
+#| fig-width: 10
+#| fig-height: 4
+class_plot_data <- reward_comparison %>%
+  group_by(Dimension, Reward, Class) %>%
+  summarise(mean = 100 * mean(Protected), se = 100 * sd(Protected) / sqrt(n()), n = n(), .groups = "drop")
+
+ggplot(class_plot_data, aes(x = factor(Class), y = mean, fill = Reward)) +
+  geom_col(position = position_dodge(0.8), width = 0.75) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), position = position_dodge(0.8), width = 0.2) +
+  geom_hline(yintercept = 10, linetype = "dashed", colour = "grey40") +
+  facet_wrap(~ Dimension) +
+  scale_fill_manual(values = c(protpop = "#2878d6", protpop_worst = "#ee6a35"),
+                    labels = c(protpop = "protpop", protpop_worst = "protpop + worst-served")) +
+  labs(x = "Class (1 = lowest, 5 = highest)", y = "Mean protected range (%)", fill = NULL) +
+  theme_minimal() +
+  theme(legend.position = "top")
 ```
 
 # Species level priorities
@@ -772,6 +857,9 @@ shark_metrics <- shark_metrics %>%
 # Order shark_metrics alphabetically by Species name
 shark_metrics <- shark_metrics %>%
   arrange(Species)
+
+# Species are matched by row: check that the order is identical in both tables
+stopifnot(identical(protected_fractions$Species, shark_metrics$Species))
 
 # Add an original order ID to protected_fractions to maintain its original order
 protected_fractions$original_order <- 1:nrow(protected_fractions)
@@ -1020,7 +1108,7 @@ edge2_plot <- combined_data %>%
   #print(combined_plots)
   
   # Save combined plot
-  ggsave(here::here("R","Outputs", "Fig3_protection_by_class.png"),
+  ggsave(file.path(out_dir, "Fig3_protection_by_class.png"),
          combined_plots, width = 20, height = 6, dpi = 150, bg = "white")
 
   #======================
@@ -1172,7 +1260,7 @@ edge2_plot <- combined_data %>%
   
   # Save results
   write.csv(comprehensive_summary,
-            here::here("R","Outputs", "data_beta_regression.csv"),
+            file.path(out_dir, "data_beta_regression.csv"),
             row.names = FALSE)
   
 } else {
@@ -1186,7 +1274,7 @@ edge2_plot <- combined_data %>%
 
 ```{r}
 #| fig-cap: "Fig. 3. Percentage of species' range protected under the 10% prioritisations, by IUCN, FUSE and EDGE2 class"
-knitr::include_graphics(here::here("R","Outputs", "Fig3_protection_by_class.png"))
+knitr::include_graphics(file.path(out_dir, "Fig3_protection_by_class.png"))
 ```
 
 ```{r}
@@ -1316,7 +1404,10 @@ comprehensive_diagnostics <- data.frame(
   Zeros_pct = c(iucn_diag$overall_zeros_pct, fuse_diag$overall_zeros_pct, edge2_diag$overall_zeros_pct),
   Influential_pct = c(iucn_diag$pct_influential, fuse_diag$pct_influential, edge2_diag$pct_influential),
   Pseudo_R2 = c(iucn_r2, fuse_r2, edge2_r2),
-  Significant = c("Yes (p<0.001)", "Yes (p=0.04)", "Yes (p<0.001)")
+  Significant = sapply(list(iucn_beta, fuse_beta, edge2_beta), function(m) {
+    p <- summary(m)$coefficients$mean[2, 4]
+    if (p < 0.001) "Yes (p<0.001)" else if (p < 0.05) sprintf("Yes (p=%.3f)", p) else sprintf("No (p=%.2f)", p)
+  })
 )
 
 # Display with kable
@@ -1416,10 +1507,10 @@ robustness_kable
 
 # Save as PNG
 save_kable(robustness_kable,
-           file = here::here("R", "Outputs", "TableS3_beta_regression_robustness.png"),
+           file = file.path(out_dir, "TableS3_beta_regression_robustness.png"),
            zoom = 2)
 
-write.csv(robustness, here::here("R", "Outputs", "data_beta_regression_robustness.csv"),
+write.csv(robustness, file.path(out_dir, "data_beta_regression_robustness.csv"),
           row.names = FALSE)
 ```
 
@@ -1657,7 +1748,7 @@ print(fig2d)
 ```{r}
 
 ggsave(
-  here::here("R", "Outputs", "report_protection_curves.png"),
+  file.path(out_dir, "report_protection_curves.png"),
   fig2d,
   width = 10, height = 6, dpi = 300, bg = "white"
 )
@@ -1689,6 +1780,7 @@ CAPTAIN2_EDGE2_msmap <- ggplot() +
   scale_color_gradientn(
     colors = c("white", "yellow", "darkblue"),
     values = c(0, 0.5, 1),
+    limits = c(0, 1),
     name = "Priority EDGE2",
     guide = guide_colorbar(barwidth = 20, barheight = 0.5, 
                          title.position = "top", title.hjust = 0.5)
@@ -1705,6 +1797,7 @@ CAPTAIN2_FUSE_msmap <- ggplot() +
   scale_color_gradientn(
     colors = c("white", "yellow", "darkblue"),
     values = c(0, 0.5, 1),
+    limits = c(0, 1),
     name = "Priority FUSE",
     guide = guide_colorbar(barwidth = 20, barheight = 0.5, 
                          title.position = "top", title.hjust = 0.5)
@@ -1721,6 +1814,7 @@ CAPTAIN2_IUCN_msmap <- ggplot() +
   scale_color_gradientn(
     colors = c("white", "yellow", "darkblue"),
     values = c(0, 0.5, 1),
+    limits = c(0, 1),
     name = "Priority IUCN",
     guide = guide_colorbar(barwidth = 20, barheight = 0.5, 
                          title.position = "top", title.hjust = 0.5)
@@ -1751,7 +1845,7 @@ grid1 <- CAPTAIN2_IUCN_msmap_labeled /
          CAPTAIN2_EDGE2_msmap_labeled
 
 # Save the grids if needed
-ggsave(here::here("R","Outputs", "report_priority_maps_grid.png"), grid1, width = 8, height = 15, dpi = 300)
+ggsave(file.path(out_dir, "report_priority_maps_grid.png"), grid1, width = 8, height = 15, dpi = 300)
 
 ```
 
@@ -1839,7 +1933,7 @@ grid2 <- IUCN_FUSE_msmap_labeled /
          EDGE2_FUSE_msmap_labeled
 
 # Save the grids if needed
-ggsave(here::here("R","Outputs", "report_difference_maps_grid.png"), grid2, width = 16, height = 15, dpi = 300)
+ggsave(file.path(out_dir, "report_difference_maps_grid.png"), grid2, width = 16, height = 15, dpi = 300)
 
 ```
 
@@ -1874,7 +1968,7 @@ combined_grid <- grid1 | grid2
 
 # If you want to save it
 ggsave(
-  filename = here::here("R","Outputs", "Fig4_priority_maps.png"),
+  filename = file.path(out_dir, "Fig4_priority_maps.png"),
   plot = combined_grid,
   width = 10,    # Adjust width as needed for two columns
   height = 12,   # Adjust height as needed for three rows
@@ -1887,7 +1981,7 @@ ggsave(
 
 ```{r}
 #| fig-cap: "Fig. 4. Conservation priorities for the IUCN, FUSE and EDGE2 dimensions (10% target) and pairwise differences between them"
-knitr::include_graphics(here::here("R","Outputs", "Fig4_priority_maps.png"))
+knitr::include_graphics(file.path(out_dir, "Fig4_priority_maps.png"))
 ```
 
 # Spatial distribution analysis
@@ -2025,7 +2119,7 @@ print(congruent_map)
 
 ```{r}
 
-ggsave(here::here("R","Outputs", "FigS9_congruence_all_dimensions.png"), 
+ggsave(file.path(out_dir, "FigS9_congruence_all_dimensions.png"), 
        congruent_map, 
        width = 10, height = 8, dpi = 300, bg = "white")
 
@@ -2260,7 +2354,7 @@ congruence_map <- ggplot() +
   ) +
   my_theme_congruence
 
-ggsave(here::here("R","Outputs", "FigS10_congruence_categories.png"), 
+ggsave(file.path(out_dir, "FigS10_congruence_categories.png"), 
        congruence_map, 
        width = 10, height = 8, dpi = 300, bg = "white")
 
@@ -2440,14 +2534,18 @@ congruence_kable <- kable(congruence_table,
 congruence_kable
 
 save_kable(congruence_kable,
-           file = here::here("R", "Outputs", "TableS4_congruence_randomisation.png"),
+           file = file.path(out_dir, "TableS4_congruence_randomisation.png"),
            zoom = 2)
 
-write.csv(congruence_results, here::here("R", "Outputs", "data_congruence_randomisation.csv"),
+write.csv(congruence_results, file.path(out_dir, "data_congruence_randomisation.csv"),
           row.names = FALSE)
 ```
 
 # Sensitivity to the protection target
+
+::: callout-warning
+Not run in this version: the predictions at 5%, 20% and 30% were produced in October 2026 with CAPTAIN 2 and the previous (misaligned) species table. This section will be updated when the new predictions are available.
+:::
 
 CAPTAIN predictions at protection targets of 5%, 20% and 30% of planning units, obtained with the models trained at 10% (50 predictions per target and dimension; D. Silvestro, October 2026). Raw outputs (`Python/captain_budget_sensitivity_runs.zip`) are summarised by `Python/Summarise CAPTAIN 2 budget sensitivity runs.py`, which reads them directly from the zip archive, into `R/Data/CAPTAIN2_budget_sensitivity_priorities.csv` (priority = frequency of selection across the 50 predictions). As these predictions come from models trained at a 10% target, they may be less optimal than solutions from models trained at each target.
 
@@ -2456,6 +2554,7 @@ CAPTAIN predictions at protection targets of 5%, 20% and 30% of planning units, 
 Each cell is coloured by the smallest protection target at which it is a high-priority area (priority \> 0.9).
 
 ```{r}
+#| eval: false
 budget_priorities <- read.csv(here::here("R", "Data", "CAPTAIN2_budget_sensitivity_priorities.csv"),
                               check.names = FALSE)
 
@@ -2531,14 +2630,15 @@ budget_maps <- ggpubr::ggarrange(
   common.legend = TRUE, legend = "bottom"
 )
 
-ggsave(here::here("R", "Outputs", "FigS12_protection_target_sensitivity_maps.png"),
+ggsave(file.path(out_dir, "FigS12_protection_target_sensitivity_maps.png"),
        plot = budget_maps, width = 8, height = 14, dpi = 300, bg = "white")
 
 ```
 
 ```{r}
+#| eval: false
 #| fig-cap: "High-priority areas (priority > 0.9) coloured by the smallest protection target (5%, 10%, 20% or 30%) at which they become high priority, for IUCN (top), FUSE (middle) and EDGE2 (bottom). Predictions at 5%, 20% and 30% come from models trained at a 10% target"
-knitr::include_graphics(here::here("R", "Outputs", "FigS12_protection_target_sensitivity_maps.png"))
+knitr::include_graphics(file.path(out_dir, "FigS12_protection_target_sensitivity_maps.png"))
 ```
 
 ## Species protection, nestedness and congruence across protection targets
@@ -2546,6 +2646,7 @@ knitr::include_graphics(here::here("R", "Outputs", "FigS12_protection_target_sen
 Species-level protection at each target is the fraction of each species' range protected, averaged across the 50 predictions (10%: `CAPTAIN2_protected_range_fractions_2ndrun.rds`; 5%, 20% and 30%: `R/Data/CAPTAIN2_budget_sensitivity_protected_range.csv`, species in the same order). Nestedness is the percentage of high-priority cells (priority \> 0.9) at a given target that remain high priority at the next larger target, and congruence is the percentage of cells that are high priority in at least one dimension that are high priority in all three, as in the main analysis.
 
 ```{r}
+#| eval: false
 budget_range <- read.csv(here::here("R", "Data", "CAPTAIN2_budget_sensitivity_protected_range.csv"))
 
 high_cells <- function(dimension, target) {
@@ -2609,11 +2710,11 @@ target_kable <- kable(target_table,
 target_kable
 
 save_kable(target_kable,
-           file = here::here("R", "Outputs", "TableS5_protection_target_sensitivity.png"),
+           file = file.path(out_dir, "TableS5_protection_target_sensitivity.png"),
            zoom = 2)
 
 write.csv(target_summary %>% left_join(target_congruence, by = "Target"),
-          here::here("R", "Outputs", "data_protection_target_sensitivity.csv"),
+          file.path(out_dir, "data_protection_target_sensitivity.csv"),
           row.names = FALSE)
 ```
 
@@ -2782,7 +2883,7 @@ combined_plot <- gridExtra::arrangeGrob(
 )
 
 # Save with dimensions better suited for A4 portrait
-ggsave(here::here("R","Outputs", "Fig5_priorities_fishing_bivariate.png"),
+ggsave(file.path(out_dir, "Fig5_priorities_fishing_bivariate.png"),
        combined_plot, width = 8.3, height = 11, dpi = 300, bg = "white") 
 
 # Display the saved image in the Quarto document
@@ -2790,7 +2891,7 @@ ggsave(here::here("R","Outputs", "Fig5_priorities_fishing_bivariate.png"),
 
 ```{r}
 #| fig-cap: "Fig. 5. Overlap between conservation priorities and fishing effort (2017-2020) for the IUCN, FUSE and EDGE2 dimensions"
-knitr::include_graphics(here::here("R","Outputs", "Fig5_priorities_fishing_bivariate.png"))
+knitr::include_graphics(file.path(out_dir, "Fig5_priorities_fishing_bivariate.png"))
 ```
 
 ## Ecoregion analysis
@@ -2983,7 +3084,7 @@ combined_ecoregion_plots <- ggpubr::ggarrange(
 combined_ecoregion_plots <- combined_ecoregion_plots +
   theme(plot.background = element_rect(fill = "white", color = NA))
 
-ggsave(here::here("R", "Outputs", "FigS11_ecoregion_priority_fishing.png"),
+ggsave(file.path(out_dir, "FigS11_ecoregion_priority_fishing.png"),
        combined_ecoregion_plots,
        width = 12, height = 10, dpi = 300, bg = "white")
 
@@ -2991,7 +3092,7 @@ ggsave(here::here("R", "Outputs", "FigS11_ecoregion_priority_fishing.png"),
 
 ```{r}
 #| fig-cap: "Fig. S11. Mean fishing effort versus mean conservation priority by marine ecoregion"
-knitr::include_graphics(here::here("R", "Outputs", "FigS11_ecoregion_priority_fishing.png"))
+knitr::include_graphics(file.path(out_dir, "FigS11_ecoregion_priority_fishing.png"))
 ```
 
 ```{r}

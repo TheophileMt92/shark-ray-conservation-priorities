@@ -131,20 +131,18 @@ combined_data_01deg <- combined_data_01deg %>%
     by = c("lon_std", "lat_std")
   )
 
-# Load saved models (comment out training blocks above after first run)
-rf_norm_no_transform <- readRDS(here::here("R", "Data", "rf_norm_no_transform.rds"))
-rf_norm_fishing_log <- readRDS(here::here("R", "Data", "rf_norm_fishing_log.rds"))
-rf_norm_predictor_log <- readRDS(here::here("R", "Data", "rf_norm_predictor_log.rds"))
-rf_norm_both_log <- readRDS(here::here("R", "Data", "rf_norm_both_log.rds"))
 
-# Function to evaluate models
-evaluate_model <- function(model, data, log_target = FALSE) {
-  predictions <- predict(model, newdata = data)
+# Function to evaluate models on out-of-bag (OOB) predictions: each training cell is predicted
+# only by the trees that did not use it, so the metrics are not computed on fitted values.
+# Metrics are computed on the original scale (fishing hours) for all models, so that they are
+# comparable between models with and without log-transformed response
+evaluate_model <- function(model, data = NULL, log_target = FALSE) {
+  predictions <- model$predicted
+  actual <- model$y
   if (log_target) {
     predictions <- 10^predictions - 1
+    actual <- 10^actual - 1
   }
-  
-  actual <- if (log_target) 10^data$log_total_fishing_hours - 1 else data$total_fishing_hours
   
   # Basic Error Metrics
   mae <- mean(abs(actual - predictions), na.rm = TRUE)
@@ -152,12 +150,12 @@ evaluate_model <- function(model, data, log_target = FALSE) {
   mape <- mean(abs((actual - predictions) / actual) * 100, na.rm = TRUE)
   medae <- median(abs(actual - predictions), na.rm = TRUE)
   
-  # R-squared (matching randomForest's % Var explained)
-  r_squared <- model$rsq[length(model$rsq)]
+  # R-squared of OOB predictions on the original scale (fishing hours)
+  r_squared <- 1 - sum((actual - predictions)^2) / sum((actual - mean(actual))^2)
   
   # Adjusted R-squared
   n <- length(actual)
-  p <- length(model$forest$independent.variable.names) # Number of predictors
+  p <- nrow(importance(model)) # Number of predictors
   adj_r_squared <- 1 - ((1 - r_squared) * (n - 1) / (n - p - 1))
   
   # Residual Analysis
@@ -490,18 +488,19 @@ raster_df <- na.omit(raster_df)
 # Convert to data.table for efficiency
 setDT(raster_df)
 
-# Round x and y to 1 decimal place for consistency
+# Lower-left corner of each 0.1-degree raster cell, the same key as lon_std/lat_std in the
+# AIS and SAR data (floor of the coordinates to 0.1 degree). The raster gives cell centres
+# (x.x5), which cannot be rounded reliably to one decimal place
 raster_df[, `:=`(
-  lon_std = round(x, digits = 1),
-  lat_std = round(y, digits = 1)
+  lon_std = round(x * 10 - 0.5) / 10,
+  lat_std = round(y * 10 - 0.5) / 10
 )]
 
 # Keep only ocean areas (negative bathymetry values)
 raster_df <- raster_df[bathy < 0]
 
-# Keep the first occurrence of each coordinate pair (because there are duplicates)
-raster_df <- unique(raster_df, by = c("lon_std", "lat_std"))
-setDT(raster_df)
+# Each raster cell has a unique key
+stopifnot(!anyDuplicated(raster_df, by = c("lon_std", "lat_std")))
 
 # Now proceed with the join and model training
 #load(here::here("R,"Data","combined_data_O1deg.Rdata"))
@@ -670,47 +669,34 @@ training_data <- combined_data_with_rasters %>%
   )
 
 
-# ---- Train normalised random forest model ----
+# ---- Train normalised random forest models ----
+# The four models are trained in parallel (one per core) and saved to R/Data/rf_norm_*.rds.
+# Set retrain_models to FALSE to load the saved models instead of training them again.
+retrain_models <- TRUE
 
-# No transform
-#rf_norm_no_transform <- randomForest(
-#  total_fishing_hours ~ detections_per_overpass + lon_std + lat_std +
-#    dist_shore + dist_ports + bathy,
-#  data = training_data,
-#  ntree = 500,
-#  importance = TRUE
-#)
-#saveRDS(rf_norm_no_transform, here::here("R", "Data", "rf_norm_no_transform.rds"))
+model_formulas <- list(
+  rf_norm_no_transform = total_fishing_hours ~ detections_per_overpass + lon_std + lat_std + dist_shore + dist_ports + bathy,
+  rf_norm_fishing_log = log_total_fishing_hours ~ detections_per_overpass + lon_std + lat_std + dist_shore + dist_ports + bathy,
+  rf_norm_predictor_log = total_fishing_hours ~ log_detections_per_overpass + lon_std + lat_std + dist_shore + dist_ports + bathy,
+  rf_norm_both_log = log_total_fishing_hours ~ log_detections_per_overpass + lon_std + lat_std + dist_shore + dist_ports + bathy
+)
+model_files <- here::here("R", "Data", paste0(names(model_formulas), ".rds"))
 
-# Fishing hours log only
-#rf_norm_fishing_log <- randomForest(
-#  log_total_fishing_hours ~ detections_per_overpass + lon_std + lat_std +
-#    dist_shore + dist_ports + bathy,
-#  data = training_data,
-#  ntree = 500,
-#  importance = TRUE
-#)
-#saveRDS(rf_norm_fishing_log, here::here("R", "Data", "rf_norm_fishing_log.rds"))
-
-# Predictor log only
-#rf_norm_predictor_log <- randomForest(
-#  total_fishing_hours ~ log_detections_per_overpass + lon_std + lat_std +
-#    dist_shore + dist_ports + bathy,
-#  data = training_data,
-#  ntree = 500,
-#  importance = TRUE
-#)
-#saveRDS(rf_norm_predictor_log, here::here("R", "Data", #"rf_norm_predictor_log.rds"))
-
-# Both log
-#rf_norm_both_log <- randomForest(
-#  log_total_fishing_hours ~ log_detections_per_overpass + lon_std + lat_std +
-#    dist_shore + dist_ports + bathy,
-#  data = training_data,
-#  ntree = 500,
-#  importance = TRUE
-#)
-#saveRDS(rf_norm_both_log, here::here("R", "Data", "rf_norm_both_log.rds"))
+if (retrain_models || !all(file.exists(model_files))) {
+  training_time <- system.time({
+    rf_models <- parallel::mclapply(seq_along(model_formulas), function(i) {
+      set.seed(20261112 + i)
+      model <- randomForest(model_formulas[[i]], data = training_data, ntree = 500, importance = TRUE)
+      saveRDS(model, model_files[i])
+      model
+    }, mc.cores = min(4, parallel::detectCores()))
+  })
+  cat("Training time (minutes):", round(training_time["elapsed"] / 60, 1), "\n")
+} else {
+  rf_models <- lapply(model_files, readRDS)
+}
+names(rf_models) <- names(model_formulas)
+list2env(rf_models, envir = environment())
 
 # ---- Evaluate normalised model ----
 validation_data <- combined_data_with_rasters %>%
@@ -751,17 +737,37 @@ combined_data_01deg <- combined_data_01deg %>%
     )
   )
 
-aggregated_data_normalised <- combined_data_01deg %>%
-  mutate(
-    lon_05deg = floor(lon_std / 0.5) * 0.5,
-    lat_05deg = floor(lat_std / 0.5) * 0.5
-  ) %>%
+# Aggregate to the 0.5-degree grid of the species ranges and CAPTAIN priorities, whose cells are
+# centred on whole and half degrees (lon_05deg and lat_05deg are cell centres). A 0.1-degree cell
+# whose edges straddle the boundary between two 0.5-degree cells is split equally between them
+to_05deg <- function(corner) {
+  i <- round(corner * 10)
+  straddle <- (i %% 5) == 2
+  low <- ifelse(straddle, (i - 2) / 5, round((i + 0.5) / 5))
+  list(centre = c(low, ((i - 2) / 5 + 1)[straddle]) * 0.5,
+       index = c(seq_along(i), which(straddle)),
+       weight = c(ifelse(straddle, 0.5, 1), rep(0.5, sum(straddle))))
+}
+fishing_01deg <- combined_data_01deg %>%
+  dplyr::select(lon_std, lat_std, predicted_fishing_hours) %>%
+  mutate(cell = row_number())
+lon_parts <- to_05deg(fishing_01deg$lon_std)
+lat_parts <- to_05deg(fishing_01deg$lat_std)
+aggregated_data_normalised <- data.frame(cell = lon_parts$index, lon_05deg = lon_parts$centre, w_lon = lon_parts$weight) %>%
+  inner_join(data.frame(cell = lat_parts$index, lat_05deg = lat_parts$centre, w_lat = lat_parts$weight),
+             by = "cell", relationship = "many-to-many") %>%
+  left_join(fishing_01deg %>% dplyr::select(cell, predicted_fishing_hours), by = "cell") %>%
+  mutate(lon_05deg = ifelse(lon_05deg >= 180, lon_05deg - 360, lon_05deg)) %>%
   group_by(lon_05deg, lat_05deg) %>%
   summarise(
-    predicted_fishing_hours = sum(predicted_fishing_hours, na.rm = TRUE),
-    n_cells = n(),
+    predicted_fishing_hours = sum(predicted_fishing_hours * w_lon * w_lat, na.rm = TRUE),
+    n_cells = sum(w_lon * w_lat),
     .groups = "drop"
   )
+# Total fishing hours are preserved by the aggregation
+stopifnot(abs(sum(aggregated_data_normalised$predicted_fishing_hours) -
+                sum(combined_data_01deg$predicted_fishing_hours, na.rm = TRUE)) < 1e-6 *
+            sum(combined_data_01deg$predicted_fishing_hours, na.rm = TRUE))
 
 save(aggregated_data_normalised,
      file = here::here("R", "Data", "Predicted_Fishing_Hours_05Deg_normalised.Rdata"))
