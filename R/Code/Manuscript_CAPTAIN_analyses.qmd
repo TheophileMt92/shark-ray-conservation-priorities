@@ -830,6 +830,52 @@ kable(poorly_protected, caption = "Number of species (out of 1,000) by protected
 ```
 
 ```{r}
+# Table S10: species protection under the two reward systems (identical in both versions of the report)
+reward_labels <- c(protpop_worst = "Class-weighted + worst-served", protpop = "Class-weighted alone")
+
+s10_protection <- reward_comparison %>%
+  group_by(Reward, Dimension, Class) %>%
+  summarise(value = sprintf("%.1f", 100 * mean(Protected)), .groups = "drop") %>%
+  pivot_wider(names_from = Class, values_from = value, names_prefix = "Class ") %>%
+  left_join(reward_comparison %>%
+              group_by(Reward, Dimension) %>%
+              summarise(`All species` = sprintf("%.1f", 100 * mean(Protected)),
+                        `< 10% protected` = as.character(sum(Protected < 0.1)),
+                        `No protection` = as.character(sum(Protected == 0)), .groups = "drop"),
+            by = c("Reward", "Dimension")) %>%
+  mutate(Reward = factor(reward_labels[Reward], levels = reward_labels)) %>%
+  arrange(Reward, Dimension) %>%
+  mutate(Reward = as.character(Reward))
+
+s10_counts <- species_classes %>%
+  count(Dimension, Class) %>%
+  mutate(Dimension = factor(Dimension, levels = c("IUCN", "FUSE", "EDGE2"))) %>%
+  pivot_wider(names_from = Class, values_from = n, names_prefix = "Class ") %>%
+  arrange(Dimension) %>%
+  mutate(across(starts_with("Class"), ~ format(.x, big.mark = ",")),
+         Reward = "Number of species", `All species` = "1,000",
+         `< 10% protected` = "", `No protection` = "")
+
+table_s10 <- bind_rows(s10_protection, s10_counts) %>%
+  dplyr::select(Reward, Dimension, `Class 1`, `Class 2`, `Class 3`, `Class 4`, `Class 5`,
+                `All species`, `< 10% protected`, `No protection`)
+
+write.csv(table_s10, file.path(out_dir, "data_reward_comparison.csv"), row.names = FALSE)
+
+s10_kable <- kable(table_s10, format = "html", row.names = FALSE, align = c("l", "l", rep("c", 8)),
+                   caption = "Species protection under the two CAPTAIN reward systems") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE, position = "center") %>%
+  row_spec(0, bold = TRUE, background = "#f0f0f0") %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  footnote(general = "Mean percentage of species' ranges protected by class (1 = lowest, 5 = highest; for IUCN, Least Concern to Critically Endangered) and across all species, and number of species (out of 1,000) with less than 10% or none of their range protected, at a 10% protection target. Values are averaged across 50 predictions.",
+           general_title = "Note:")
+
+s10_kable
+
+save_kable(s10_kable, file = file.path(out_dir, "TableS10_reward_comparison.png"), zoom = 2)
+```
+
+```{r}
 #| fig-cap: "Mean protected fraction of species ranges by class (± standard error) for the two reward systems"
 #| fig-width: 10
 #| fig-height: 4
