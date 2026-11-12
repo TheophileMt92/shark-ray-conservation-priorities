@@ -3038,6 +3038,13 @@ label_data_iucn  <- get_labels(ecoregion_combined_iucn)
 label_data_fuse  <- get_labels(ecoregion_combined_fuse)
 label_data_edge2 <- get_labels(ecoregion_combined_edge2)
 
+# Save ecoregion-level priority and fishing effort for each dimension (used in the Results)
+write.csv(bind_rows(IUCN = ecoregion_combined_iucn, FUSE = ecoregion_combined_fuse,
+                    EDGE2 = ecoregion_combined_edge2, .id = "Dimension") %>%
+            dplyr::select(Dimension, ECOREGION, REALM, mean_priority, mean_fishing_hours,
+                          median_fishing_hours, fishing_cells, priority_cells),
+          file.path(out_dir, "data_ecoregion_priority_fishing.csv"), row.names = FALSE)
+
 # ---- Shared colour scale ----
 all_realms <- sort(unique(c(
   ecoregion_combined_iucn$REALM,
