@@ -333,17 +333,21 @@ grid_sf <- grid_data_continental %>%
 grid_sf <- st_transform(grid_sf, st_crs(meow_ecos))
 eez <- st_transform(eez, st_crs(grid_sf))
 
+# Grid cells are points: each cell is assigned to the first polygon it falls in.
+# (st_join with largest = TRUE computes point-polygon intersections, which gives the same
+# assignment for points but crashed R with memory errors in s2; planar GEOS predicates are used instead)
+s2_state_breakdown <- suppressMessages(sf::sf_use_s2(FALSE))
+join_first <- function(points, polygons) {
+  first <- vapply(st_intersects(points, polygons),
+                  function(i) if (length(i) > 0) i[1] else NA_integer_, integer(1))
+  bind_cols(points, st_drop_geometry(polygons)[first, , drop = FALSE])
+}
+
 #=====================
 # Calculate by Realm
 #=====================
-# Extract realms from meow_ecos
-realms <- meow_ecos %>%
-  group_by(REALM) %>%
-  summarize(geometry = st_union(geometry)) %>%
-  ungroup()
-
-# Spatial join with realms
-grid_realms <- st_join(grid_sf, realms, largest = TRUE)
+# Realm of each cell, from the ecoregion it falls in (realms are unions of ecoregions)
+grid_realms <- join_first(grid_sf, meow_ecos %>% dplyr::select(REALM))
 
 # Alternative approach - calculate SD in a separate step
 realm_stats <- grid_realms %>%
@@ -376,7 +380,7 @@ realm_stats <- realm_stats %>%
 # Calculate by Ecoregion
 #======================
 # Spatial join with ecoregions
-grid_ecoregions <- st_join(grid_sf, meow_ecos, largest = TRUE)
+grid_ecoregions <- join_first(grid_sf, meow_ecos)
 
 # Calculate main stats
 ecoregion_stats <- grid_ecoregions %>%
@@ -413,13 +417,9 @@ ecoregion_stats <- ecoregion_stats %>%
 # Fix potential invalid geometries in EEZ data
 eez_valid <- st_make_valid(eez)
 
-# Spatial join with EEZ. Grid cells are points, so each cell is assigned to the first EEZ it falls in.
-# (st_join with largest = TRUE computes point-polygon intersections, which gives the same assignment for
-# points but crashed R with recursive garbage collection errors in s2.)
-eez_attributes <- eez_valid %>% select(TERRITORY1, SOVEREIGN1, ISO_TER1, MRGID_TER1)
-first_eez <- vapply(st_intersects(grid_sf, eez_attributes),
-                    function(i) if (length(i) > 0) i[1] else NA_integer_, integer(1))
-grid_eez <- bind_cols(grid_sf, st_drop_geometry(eez_attributes)[first_eez, , drop = FALSE])
+# Spatial join with EEZ
+grid_eez <- join_first(grid_sf, eez_valid %>% select(TERRITORY1, SOVEREIGN1, ISO_TER1, MRGID_TER1))
+suppressMessages(sf::sf_use_s2(TRUE))
 
 # Calculate main stats
 eez_stats <- grid_eez %>%
@@ -1294,7 +1294,9 @@ ses_grid_sf <- mean_ses_per_cell_clean %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
 
 # Spatial join with ecoregions
+suppressMessages(sf::sf_use_s2(FALSE))
 ses_grid_ecoregions <- st_join(ses_grid_sf, meow_ecos)
+suppressMessages(sf::sf_use_s2(TRUE))
 
 # Calculate mean SES by ecoregion (excluding areas outside ecoregions)
 ecoregion_ses_stats <- ses_grid_ecoregions %>%
