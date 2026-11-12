@@ -1,0 +1,233 @@
+#!/usr/bin/env python
+"""Train a CAPTAIN 3 policy for one prioritization metric and reward setup.
+
+    python train_sharks.py --metric IUCN --setup protpop
+    python train_sharks.py --metric IUCN --setup protpop_worst [--worst-weight 1]
+
+protpop_worst adds the two reward terms (both protected fractions in [0, 1]) with weights
+1 and --worst-weight. With --calibrated the terms are first scaled by the calibration of
+the same configuration (calibrate_sharks.py). The worst-served weight starts at
+--worst-weight-start (default 100) and is lowered geometrically to --worst-weight over the
+first --anneal-epochs (default 100), so that training gets a signal from the
+worst-served species before protpop pulls all protection onto the high-priority ones
+(see shark_common.WORST_WEIGHT_START). Its multiplier per epoch is logged in
+worst_weight.tsv. The ES noise sigma is kept >= --min-sigma.
+Results go to <SHARK_RUNS_DIR>/models/<run name> (default <metric>_<setup>, with _eq or
+_cal for protpop_worst):
+settings.json, training_log.tsv, trained_weights.npy (last epoch) and
+weights_history/ with the weights of the last --keep-weights epochs, which
+predict_sharks.py uses as replicates (as CAPTAIN 2's sample_weights_from_last_iter).
+
+Memory: one environment with all 1,000 species takes ~1.5-2 GB. On CPU, each worker
+process holds its own copy (plus one in the main process), so keep --workers low on a
+laptop; on a GPU a single runner evaluates the perturbations in sequence.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime
+import json
+import shutil
+import time
+
+import numpy as np
+
+import captain as cn
+import shark_common as sc
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    sc.add_config_arguments(parser)
+    parser.add_argument("--epochs", type=int, default=300)
+    parser.add_argument(
+        "--perturbations", type=int, default=30, help="ES perturbations evaluated per epoch"
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="CPU worker processes (each holds a copy of the environment); ignored on GPU",
+    )
+    parser.add_argument("--learning-rate", type=float, default=sc.LEARNING_RATE)
+    parser.add_argument("--sigma", type=float, default=sc.INITIAL_SIGMA)
+    parser.add_argument(
+        "--min-sigma",
+        type=float,
+        default=sc.MIN_SIGMA,
+        help="floor of the ES noise (with zscore advantages, steps scale as lr / sigma)",
+    )
+    parser.add_argument("--advantage-norm", default="zscore", choices=["zscore", "rank", "none"])
+    parser.add_argument(
+        "--keep-weights",
+        type=int,
+        default=50,
+        help="keep the weights of the last N epochs (prediction replicates)",
+    )
+    parser.add_argument(
+        "--plot-freq", type=int, default=50, help="map of the protected cells every N epochs"
+    )
+    parser.add_argument("--run-name", default=None)
+    parser.add_argument("--overwrite", action="store_true")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    device = args.device or sc.default_device()
+    run_name = args.run_name or sc.default_run_name(args)
+    run_dir = sc.MODELS_DIR / run_name
+    if (run_dir / "settings.json").exists():
+        if not args.overwrite:
+            raise FileExistsError(f"{run_dir} exists: use --overwrite or another --run-name")
+        shutil.rmtree(run_dir)
+    history_dir = run_dir / "weights_history"
+    history_dir.mkdir(parents=True, exist_ok=True)
+
+    calibration = None
+    if args.calibrated and args.setup != "protpop_worst":
+        raise ValueError("--calibrated only applies to the protpop_worst setup")
+    annealing_on = sc.annealing(args)
+    if annealing_on and (args.worst_weight_start <= 0 or args.anneal_epochs < 1):
+        raise ValueError("--worst-weight-start must be > 0 and --anneal-epochs >= 1")
+    if args.calibrated:
+        calib_file = sc.calibration_file(args)
+        if not calib_file.exists():
+            raise FileNotFoundError(
+                f"{calib_file} not found: run calibrate_sharks.py with the same "
+                f"--metric/--setup/--n-decisions/--max-species first"
+            )
+        with open(calib_file) as f:
+            calibration = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
+
+    data = sc.load_prepared(args.max_species, args.subset_seed)
+    n_runners = 1 if device == "cuda" else max(1, args.workers)
+    print(f"Creating {n_runners} episode runner(s) on {device}...")
+    runners = [sc.create_episode_runner(args, data) for _ in range(n_runners)]
+    del data
+    episode = runners[0]
+    print(sc.describe_runner(episode))
+
+    trainer = cn.EvolStrategiesTrainer(
+        runners,
+        initial_coeffs=episode.policy.get_flat_weights(),
+        scheduler=cn.LearningScheduler(
+            initial_alpha=args.learning_rate, initial_sigma=args.sigma, min_sigma=args.min_sigma
+        ),
+        epsilon_reward=0.5,
+        n_perturbations=args.perturbations,
+        seed=args.seed,
+        advantage_normalization=None if args.advantage_norm == "none" else args.advantage_norm,
+    )
+    if calibration is not None:
+        trainer.load_reward_calibration(calib_file)
+        print(f"Rewards calibrated with {calib_file.name}: {calibration}")
+    if annealing_on:
+        # Annealing sets the reward multipliers each epoch: calibration x schedule
+        base_multipliers = (
+            np.array([calibration["protpop"], calibration["worst"]])
+            if calibration is not None
+            else np.ones(2)
+        )
+        if trainer._use_pool:
+            print(
+                "Warning: with several CPU workers the per-epoch multipliers are sent through "
+                "the worker pool, which does not guarantee that every worker receives them; "
+                "use --workers 1 or a GPU"
+            )
+        print(
+            f"Worst-served weight annealed from {args.worst_weight_start:g} to "
+            f"{args.worst_weight:g} over {args.anneal_epochs} epochs"
+        )
+
+    config = sc.config_settings(args)
+    settings = {
+        "run_name": run_name,
+        "config": config,
+        "config_hash": sc.config_hash(config),
+        "reward_weights": {
+            "protpop": 1.0,
+            **({"worst": args.worst_weight} if args.setup == "protpop_worst" else {}),
+        },
+        "worst_weight_annealing": (
+            {
+                "start": args.worst_weight_start,
+                "final": args.worst_weight,
+                "epochs": args.anneal_epochs,
+                "schedule": "geometric",
+            }
+            if annealing_on
+            else None
+        ),
+        "calibration": (
+            {"file": calib_file.name, "multipliers": calibration}
+            if calibration is not None
+            else None
+        ),
+        "training": {
+            "epochs": args.epochs,
+            "perturbations": args.perturbations,
+            "learning_rate": args.learning_rate,
+            "sigma": args.sigma,
+            "min_sigma": args.min_sigma,
+            "advantage_normalization": args.advantage_norm,
+            "seed": args.seed,
+            "keep_weights": args.keep_weights,
+            "device": device,
+            "workers": n_runners,
+        },
+        "captain_commit": sc.captain_commit(),
+        "started": datetime.datetime.now().isoformat(timespec="seconds"),
+    }
+    with open(run_dir / "settings.json", "w") as f:
+        json.dump(settings, f, indent=2)
+
+    logger = cn.algorithms.TrainingLogger(
+        trainer=trainer,
+        episode=episode,
+        results_dir=run_dir,
+        log_file="training_log.tsv",
+        weights_file="trained_weights.npy",
+        plot_freq=args.plot_freq,
+        figsize=(10, 5),
+    )
+
+    print(f"\nTraining {run_name} for {args.epochs} epochs...")
+    t_start = time.time()
+    for epoch in range(args.epochs):
+        t0 = time.time()
+        if annealing_on:
+            factor = sc.worst_weight_factor(args, epoch)
+            trainer.calibrate_reward_scales(base_multipliers * np.array([1.0, factor]))
+            with open(run_dir / "worst_weight.tsv", "a") as f:
+                if epoch == 0:
+                    f.write("epoch\tworst_weight\n")
+                f.write(f"{epoch}\t{args.worst_weight * factor:.6g}\n")
+        avg_reward, summary = trainer.train_epoch()
+        # The scheduler's adaptive (jaccard-based) sigma update may skip its floor
+        trainer.scheduler.sigma = max(trainer.scheduler.sigma, args.min_sigma)
+        logger.log_epoch(epoch, avg_reward, summary, time.time() - t0)
+        np.save(history_dir / f"epoch_{epoch:04d}.npy", trainer.get_weights())
+        old = epoch - args.keep_weights
+        if old >= 0:
+            (history_dir / f"epoch_{old:04d}.npy").unlink(missing_ok=True)
+
+    settings["finished"] = datetime.datetime.now().isoformat(timespec="seconds")
+    settings["epochs_completed"] = args.epochs
+    settings["final_running_reward"] = float(trainer.running_reward)
+    with open(run_dir / "settings.json", "w") as f:
+        json.dump(settings, f, indent=2)
+    print(f"Training complete in {time.time() - t_start:.0f} s, results in {run_dir}")
+
+    cn.plots.plot_rl_rewards(
+        logger.log_path,
+        title=f"Reward over training ({run_name})",
+        outfile=run_dir / "reward_over_training.png",
+        reward_col="avg_reward",
+    )
+    trainer.close()
+
+
+if __name__ == "__main__":
+    main()
