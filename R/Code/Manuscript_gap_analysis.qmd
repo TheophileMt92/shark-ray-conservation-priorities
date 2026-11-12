@@ -630,10 +630,10 @@ ggsave(here("R","Outputs", "report_top20_EEZ_coverage.png"), top_eez_plot, width
 
 ## Null model of MPA placement and overlaps with the range of sharks and rays
 
-The null model (100 iterations) randomly redistributes, within each country's EEZ, the same number of no-take MPA cells as observed, among marine cells only (bathymetry < 0). Its results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded in the next section. Set `eval: false` below to skip re-running it (results are reproducible, as each iteration uses a fixed seed).
+The null model (100 iterations) randomly redistributes, within each country's EEZ, the same number of no-take MPA cells as observed, among marine cells only (bathymetry < 0). It is not re-run when rendering this report: its results (run on 12 November 2026) are saved in `R/Outputs/data_null_model_coverage.csv` and loaded in the next section. Set `eval: true` below to re-run it (results are reproducible, as each iteration uses a fixed seed).
 
 ```{r}
-#| eval: true
+#| eval: false
 # Create marine mask from bathymetry (areas < 0)
 marine_mask <- Bathy < 0
 
@@ -914,7 +914,7 @@ stacked_bar_chart <- ggplot(summary_NT, aes(x = 1, y = Percentage, fill = Repres
                                 "Equally represented" = "#999999",
                                 "Under-represented" = "#E69F00"),
                     breaks = c("Under-represented", "Equally represented", "Over-represented")) +
-  geom_text(aes(label = sprintf("%.2f%%", Percentage)),
+  geom_text(aes(label = sprintf("%.2f", Percentage)),
             position = position_stack(vjust = 0.5),
             color = "black", size = 5) +
   coord_flip() +
@@ -1045,7 +1045,7 @@ combined_iucn_summary <- bind_rows(
 # Create a bar plot comparing IUCN distributions
 iucn_plot_NT <- ggplot(combined_iucn_summary, aes(x = IUCN_status, y = percentage, fill = title)) +
   geom_bar(stat = "identity", position = "dodge") +
-  geom_text(aes(label = paste0(round(percentage, 2), "%")),
+  geom_text(aes(label = sprintf("%.2f", percentage)),
             position = position_dodge(width = 0.9),
             vjust = -0.5,
             size = 3) +
