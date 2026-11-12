@@ -648,10 +648,11 @@ create_eez_mask <- function(template_raster) {
   # Ensure EEZ has a unique identifier for each country
   eez$country_id <- as.numeric(as.factor(eez$SOVEREIGN1))
   
-  # Rasterize the EEZ shapefile using the country_id
-  eez_raster <- rasterize(eez, template_raster, field = "country_id")
+  # Rasterize the EEZ shapefile using the country_id (with terra: converting the EEZ polygons to
+  # sp objects for raster::rasterize overflows the protection stack)
+  eez_raster <- terra::rasterize(terra::vect(eez), terra::rast(template_raster), field = "country_id")
   
-  return(eez_raster)
+  return(raster::raster(eez_raster))
 }
 
 # Updated create_random_mpa function to randomize within each country's EEZ
