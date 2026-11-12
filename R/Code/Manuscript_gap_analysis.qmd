@@ -1,5 +1,5 @@
 ---
-title: "Manuscript_gap_analysis"
+title: "Gap analysis: coverage of shark and ray ranges by no-take MPAs"
 author: "Théophile L. Mouton"
 date: today
 date-format: "D MMMM YYYY"
@@ -351,8 +351,8 @@ realm_stats <- grid_realms %>%
   filter(!is.na(REALM)) %>%
   group_by(REALM) %>%
   summarize(
-    mean_NT_coverage = mean(mean_NT_coverage, na.rm = TRUE),
     median_NT_coverage = median(mean_NT_coverage, na.rm = TRUE),
+    mean_NT_coverage = mean(mean_NT_coverage, na.rm = TRUE),
     n_cells = n(),
     .groups = "drop"
   )
@@ -386,8 +386,8 @@ ecoregion_stats <- grid_ecoregions %>%
   summarize(
     PROVINCE = first(PROVINCE),
     REALM = first(REALM),
-    mean_NT_coverage = mean(mean_NT_coverage, na.rm = TRUE),
     median_NT_coverage = median(mean_NT_coverage, na.rm = TRUE),
+    mean_NT_coverage = mean(mean_NT_coverage, na.rm = TRUE),
     n_cells = n(),
     .groups = "drop"
   )
@@ -424,8 +424,8 @@ eez_stats <- grid_eez %>%
   summarize(
     ISO_TER1 = first(ISO_TER1),
     MRGID_TER1 = first(MRGID_TER1),
-    mean_NT_coverage = mean(mean_NT_coverage, na.rm = TRUE),
     median_NT_coverage = median(mean_NT_coverage, na.rm = TRUE),
+    mean_NT_coverage = mean(mean_NT_coverage, na.rm = TRUE),
     n_cells = n(),
     .groups = "drop"
   )
@@ -625,10 +625,10 @@ ggsave(here("R","Outputs", "report_top20_EEZ_coverage.png"), top_eez_plot, width
 
 ## Null model of MPA placement and overlaps with the range of sharks and rays
 
-The null model (100 iterations) is not re-run when rendering this report: its results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded in the next section. Set `eval: true` below to re-run it (results are reproducible, as each iteration uses a fixed seed).
+The null model (100 iterations) randomly redistributes, within each country's EEZ, the same number of no-take MPA cells as observed, among marine cells only (bathymetry < 0). Its results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded in the next section. Set `eval: false` below to skip re-running it (results are reproducible, as each iteration uses a fixed seed).
 
 ```{r}
-#| eval: false
+#| eval: true
 # Create marine mask from bathymetry (areas < 0)
 marine_mask <- Bathy < 0
 
@@ -670,10 +670,10 @@ create_random_mpa <- function(template_raster, marine_mask, eez_mask) {
     country_mask <- eez_mask == country_id
     
     # Count original marine MPA cells within current country's EEZ
-    original_mpa_cells <- sum(template_raster[] == 1 & country_mask[] & !is.na(combined_mask[]), na.rm = TRUE)
+    original_mpa_cells <- sum(template_raster[] == 1 & country_mask[] & combined_mask[] %in% 1, na.rm = TRUE)
     
     # Get all valid cells for current country (marine areas within EEZ)
-    valid_cells <- which(country_mask[] & !is.na(combined_mask[]))
+    valid_cells <- which(country_mask[] & combined_mask[] %in% 1)
     total_valid_cells <- length(valid_cells)
     
     if (original_mpa_cells > 0 && total_valid_cells > 0) {
@@ -773,6 +773,8 @@ processed_results <- list()
 
 if (exists("random_results_NT")) {
   processed_results[["No-take MPAs"]] <- process_results(random_results_NT, "No-take MPAs")
+  write.csv(processed_results[["No-take MPAs"]]$all_results,
+            here::here("R","Outputs", "data_null_model_coverage.csv"), row.names = FALSE)
 }
 ```
 
@@ -1108,11 +1110,15 @@ prepare_contingency <- function(summary_df1, summary_df2) {
 
 # Perform chi-square test
 contingency_NT <- prepare_contingency(all_iucn_summary, under_NT_iucn_summary)
-rownames(contingency_NT) <- c("All Species", "Under-represented (No-take MPAs)")
+# Compare under-represented species with the other species (two independent groups),
+# rather than with all species, which include the under-represented ones
+contingency_NT[1, ] <- contingency_NT[1, ] - contingency_NT[2, ]
+stopifnot(all(contingency_NT >= 0))
+rownames(contingency_NT) <- c("Other species", "Under-represented (No-take MPAs)")
 colnames(contingency_NT) <- c("LC", "NT", "VU", "EN", "CR")
 
 knitr::kable(contingency_NT,
-             caption = "Number of species per IUCN category: all species and species under-represented in no-take MPAs")
+             caption = "Number of species per IUCN category: species under-represented in no-take MPAs and the other species")
 
 # Run chi-square test
 chi_test_NT <- chisq.test(contingency_NT)
@@ -1293,9 +1299,9 @@ ecoregion_ses_stats <- ses_grid_ecoregions %>%
   summarize(
     PROVINCE = first(PROVINCE),
     REALM = first(REALM),
-    mean_SES = mean(mean_SES, na.rm = TRUE),
     median_SES = median(mean_SES, na.rm = TRUE),
     sd_SES = sd(mean_SES, na.rm = TRUE),
+    mean_SES = mean(mean_SES, na.rm = TRUE),
     n_cells = n(),
     .groups = "drop"
   ) %>%
@@ -1708,10 +1714,9 @@ if (nrow(qr_clean) > 0) {
       panel.background = element_rect(fill = "white", color = NA)
     ) +
     scale_x_discrete(limits = iucn_order) +
-    scale_y_sqrt(limits = c(0, 50),
-                 breaks = seq(0, 50, 10),
+    scale_y_sqrt(breaks = seq(0, 50, 10),
                  labels = c("0", "10", "20", "30", "40", "")) +
-    coord_cartesian(clip = "off")
+    coord_cartesian(ylim = c(0, 50), clip = "off")
   
   # Panel B: Quantile slopes
   panel_b <- ggplot(qr_summary_clean, aes(x = Tau, y = Slope)) +
@@ -1847,9 +1852,9 @@ rdplot_points <- ggplot(notake_mpa_iucn,
   ) +
   scale_x_discrete(limits = iucn_order) +
   scale_color_manual(values = iucn_colors) +
-  scale_y_sqrt(limits = c(0, 50),
-               breaks = seq(0, 50, 10),
-               labels = c("0", "10", "20", "30", "40", ""))
+  scale_y_sqrt(breaks = seq(0, 50, 10),
+               labels = c("0", "10", "20", "30", "40", "")) +
+  coord_cartesian(ylim = c(0, 50))
 
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: "Manuscript_CAPTAIN_analyses"
+title: "Conservation priorities with CAPTAIN v3"
 author: "Théophile L. Mouton"
 date: today
 date-format: "D MMMM YYYY"
@@ -38,11 +38,13 @@ This report summarises the CAPTAIN 3 prioritisations run in November 2026 (D. Si
 The raw outputs (`Python/captain3_models.zip`) are summarised by `Python/Summarise CAPTAIN 3 outputs.py` into `R/Data/CAPTAIN3/`. The reward system is set with the `reward` parameter of this report. To render both versions:
 
 ```         
-quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop_worst -M output-file:Manuscript_CAPTAIN_analyses_protpop_worst.html
-quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop -M output-file:Manuscript_CAPTAIN_analyses_protpop.html
+quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop_worst
+mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html
+quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop
+mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop.html
 ```
 
-Figures and tables are saved in `R/Outputs/CAPTAIN3_<reward>/`. The sensitivity analysis to the protection target is not run, as the 5%, 20% and 30% predictions have not yet been produced with the corrected species table.
+Figures and tables are saved in `R/Outputs/CAPTAIN3_<reward>/`, including the sensitivity analysis to the protection target (Fig. S12, Table S5).
 
 # Load libraries
 
@@ -2572,19 +2574,15 @@ write.csv(congruence_results, file.path(out_dir, "data_congruence_randomisation.
 
 # Sensitivity to the protection target
 
-::: callout-warning
-Not run in this version: the predictions at 5%, 20% and 30% were produced in October 2026 with CAPTAIN 2 and the previous (misaligned) species table. This section will be updated when the new predictions are available.
-:::
 
-CAPTAIN predictions at protection targets of 5%, 20% and 30% of planning units, obtained with the models trained at 10% (50 predictions per target and dimension; D. Silvestro, October 2026). Raw outputs (`Python/captain_budget_sensitivity_runs.zip`) are summarised by `Python/Summarise CAPTAIN 2 budget sensitivity runs.py`, which reads them directly from the zip archive, into `R/Data/CAPTAIN2_budget_sensitivity_priorities.csv` (priority = frequency of selection across the 50 predictions). As these predictions come from models trained at a 10% target, they may be less optimal than solutions from models trained at each target.
+CAPTAIN v3 predictions at protection targets of 5%, 20% and 30% of planning units, obtained with the models trained at 10% (50 predictions per target and dimension; D. Silvestro, November 2026). Raw outputs (`Python/captain3_models.zip`) are summarised by `Python/Summarise CAPTAIN 3 outputs.py` into `R/Data/CAPTAIN3/CAPTAIN3_<reward>_budget_sensitivity_priorities.csv` (priority = frequency of selection across the 50 predictions). As these predictions come from models trained at a 10% target, they may be less optimal than solutions from models trained at each target.
 
 ## Maps of high-priority areas across protection targets
 
 Each cell is coloured by the smallest protection target at which it is a high-priority area (priority \> 0.9).
 
 ```{r}
-#| eval: false
-budget_priorities <- read.csv(here::here("R", "Data", "CAPTAIN2_budget_sensitivity_priorities.csv"),
+budget_priorities <- read.csv(here::here("R", "Data", "CAPTAIN3", paste0("CAPTAIN3_", reward, "_budget_sensitivity_priorities.csv")),
                               check.names = FALSE)
 
 # Grid cell coordinates (PUID = cell number of the 0.5-degree grid)
@@ -2665,18 +2663,17 @@ ggsave(file.path(out_dir, "FigS12_protection_target_sensitivity_maps.png"),
 ```
 
 ```{r}
-#| eval: false
 #| fig-cap: "High-priority areas (priority > 0.9) coloured by the smallest protection target (5%, 10%, 20% or 30%) at which they become high priority, for IUCN (top), FUSE (middle) and EDGE2 (bottom). Predictions at 5%, 20% and 30% come from models trained at a 10% target"
 knitr::include_graphics(file.path(out_dir, "FigS12_protection_target_sensitivity_maps.png"))
 ```
 
 ## Species protection, nestedness and congruence across protection targets
 
-Species-level protection at each target is the fraction of each species' range protected, averaged across the 50 predictions (10%: `CAPTAIN2_protected_range_fractions_2ndrun.rds`; 5%, 20% and 30%: `R/Data/CAPTAIN2_budget_sensitivity_protected_range.csv`, species in the same order). Nestedness is the percentage of high-priority cells (priority \> 0.9) at a given target that remain high priority at the next larger target, and congruence is the percentage of cells that are high priority in at least one dimension that are high priority in all three, as in the main analysis.
+Species-level protection at each target is the fraction of each species' range protected, averaged across the 50 predictions (10%: `R/Data/CAPTAIN3/CAPTAIN3_<reward>_protected_range_fractions.csv`; 5%, 20% and 30%: `R/Data/CAPTAIN3/CAPTAIN3_<reward>_budget_sensitivity_protected_range.csv`, species in the same order). Nestedness is the percentage of high-priority cells (priority \> 0.9) at a given target that remain high priority at the next larger target, and congruence is the percentage of cells that are high priority in at least one dimension that are high priority in all three, as in the main analysis.
 
 ```{r}
-#| eval: false
-budget_range <- read.csv(here::here("R", "Data", "CAPTAIN2_budget_sensitivity_protected_range.csv"))
+budget_range <- read.csv(here::here("R", "Data", "CAPTAIN3", paste0("CAPTAIN3_", reward, "_budget_sensitivity_protected_range.csv")))
+stopifnot(identical(budget_range$Species, protected_fractions$Species))
 
 high_cells <- function(dimension, target) {
   priorities_targets$PUID[priorities_targets[[paste0(dimension, "_", target)]] > 0.9]
@@ -2686,7 +2683,7 @@ target_summary <- do.call(rbind, lapply(c("IUCN", "FUSE", "EDGE2"), function(dim
   do.call(rbind, lapply(seq_along(targets), function(i) {
     target <- targets[i]
     fraction <- if (target == "0.1") protected_fractions[[dimension]] else budget_range[[paste0(dimension, "_", target)]]
-    top_class <- budget_range[[paste0(dimension, "_class")]] == 0
+    top_class <- budget_range[[paste0(dimension, "_class")]] == 5
     cells <- high_cells(dimension, target)
     retained <- if (i < length(targets)) 100 * mean(cells %in% high_cells(dimension, targets[i + 1])) else NA
     data.frame(Dimension = dimension,
