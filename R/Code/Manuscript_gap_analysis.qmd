@@ -413,8 +413,13 @@ ecoregion_stats <- ecoregion_stats %>%
 # Fix potential invalid geometries in EEZ data
 eez_valid <- st_make_valid(eez)
 
-# Spatial join with EEZ
-grid_eez <- st_join(grid_sf, eez_valid %>% select(TERRITORY1, SOVEREIGN1, ISO_TER1, MRGID_TER1), largest = TRUE)
+# Spatial join with EEZ. Grid cells are points, so each cell is assigned to the first EEZ it falls in.
+# (st_join with largest = TRUE computes point-polygon intersections, which gives the same assignment for
+# points but crashed R with recursive garbage collection errors in s2.)
+eez_attributes <- eez_valid %>% select(TERRITORY1, SOVEREIGN1, ISO_TER1, MRGID_TER1)
+first_eez <- vapply(st_intersects(grid_sf, eez_attributes),
+                    function(i) if (length(i) > 0) i[1] else NA_integer_, integer(1))
+grid_eez <- bind_cols(grid_sf, st_drop_geometry(eez_attributes)[first_eez, , drop = FALSE])
 
 # Calculate main stats
 eez_stats <- grid_eez %>%
