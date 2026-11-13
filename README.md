@@ -1,7 +1,7 @@
 # Global gaps and priorities for shark and ray conservation
 
 [![Reports](https://img.shields.io/badge/reports-GitHub%20Pages-0a6ebd)](https://theophilemt92.github.io/shark-ray-conservation-priorities/)
-[![Zenodo](https://img.shields.io/badge/archive-Zenodo-1682d4)](https://doi.org/10.5281/zenodo.20719267)
+[![Zenodo](https://img.shields.io/badge/archive-Zenodo-1682d4)](https://doi.org/10.5281/zenodo.24199590)
 [![Preprint](https://img.shields.io/badge/preprint-bioRxiv-b31b1b)](https://www.biorxiv.org/content/10.1101/2025.11.28.691085v1)
 
 Data and code for the manuscript:
