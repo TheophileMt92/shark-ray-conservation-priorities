@@ -1,18 +1,35 @@
-# CAPTAIN_elasmo_manuscript
+# Global gaps and priorities for shark and ray conservation
+
+[![Reports](https://img.shields.io/badge/reports-GitHub%20Pages-0a6ebd)](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/)
+[![Zenodo](https://img.shields.io/badge/archive-Zenodo-1682d4)](https://doi.org/10.5281/zenodo.20719267)
+[![Preprint](https://img.shields.io/badge/preprint-bioRxiv-b31b1b)](https://www.biorxiv.org/content/10.1101/2025.11.28.691085v1)
 
 Data and code for the manuscript:
 
 > Mouton, T. L., Silvestro, D., Kocáková, K., Spitznagel, D., Leprieur, F., & Pimiento, C. Global gaps and priorities for shark and ray conservation: Integrating threat, function, and evolutionary distinctiveness. *Science Advances* (in revision). Preprint: [bioRxiv 10.1101/2025.11.28.691085](https://www.biorxiv.org/content/10.1101/2025.11.28.691085v1)
 
-Archived version: [Zenodo, doi:10.5281/zenodo.20719267](https://doi.org/10.5281/zenodo.20719267)
+The study has three components:
 
-The repository contains the inputs, code and outputs needed to reproduce the three components of the study:
+1. **Gap analysis**: how much of the range of each of 1,000 elasmobranch species is covered by no-take marine protected areas (MPAs), compared with a null model of random MPA placement.
+2. **Conservation prioritisation**: where a no-take network covering 10% of the ocean would best protect species according to their extinction risk (IUCN status), functional distinctiveness (FUSE) and evolutionary distinctiveness (EDGE2), optimised with the CAPTAIN reinforcement learning algorithm.
+3. **Overlap with fishing effort**: where these priorities overlap with high or low industrial fishing effort, estimated from vessel tracking (AIS) and satellite radar (SAR) data.
 
-1. **Gap analysis**: coverage of the ranges of 1,000 elasmobranch species by no-take MPAs (IUCN categories Ia to III), compared with a spatially explicit null model of MPA placement.
-2. **Conservation prioritisation**: spatial priorities for a 10% no-take target, optimised with CAPTAIN for three dimensions of conservation value (IUCN status, FUSE and EDGE2).
-3. **Overlap with fishing effort**: post hoc overlap between priorities and industrial fishing effort estimated from AIS and Sentinel-1 SAR vessel detections.
+---
 
-All R analyses are provided as reproducible Quarto reports (`.qmd`), with their rendered HTML versions.
+## Read the analyses
+
+Every analysis is a reproducible Quarto report. The rendered reports can be read in any web browser, with the code folded under each step, the results, and all figures and tables of the manuscript. No programming knowledge is needed to read them.
+
+| | Report | What it shows | Manuscript items |
+|:-:|---|---|---|
+| 1 | [**Data preparation: species table and conservation metrics**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_data_preparation.html) | Builds the table of IUCN, FUSE and EDGE2 classes for the 1,000 species, and checks it against the IUCN Red List | Input to all analyses |
+| 2 | [**Normalising SAR vessel detections by satellite overpasses**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/SAR_overpass_normalisation.html) | Explores how satellite overpass frequency affects SAR vessel detections, and why detections are normalised by overpass | Supporting analysis |
+| 3 | [**Global fishing effort from AIS and SAR data**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_fishing_hours.html) | Combines AIS fishing hours and SAR detections, and predicts fishing hours where only SAR detections exist with a random forest model | Figs. S13 to S16, Tables S6 to S9 |
+| 4 | [**Gap analysis: coverage of shark and ray ranges by no-take MPAs**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_gap_analysis.html) | Species and regional coverage by no-take MPAs, comparison between IUCN categories, and null model of MPA placement | Fig. 2, Figs. S1 to S8, Tables S1 and S2 |
+| 5 | [**Conservation priorities with CAPTAIN v3**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html) (main analysis) | Priority maps, protection of species by class, congruence among dimensions, sensitivity to the protection target, and overlap with fishing effort | Figs. 3 to 5, Figs. S9 to S12, Tables S3 to S5 and S10 |
+| 6 | [**Conservation priorities with CAPTAIN v3, class-weighted reward alone**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_CAPTAIN_analyses_protpop.html) | Same report with the class-weighted reward alone, for comparison | Figs. S17 and S18 |
+
+The same reports are in `R/Code/` (`.qmd` source and rendered `.html`).
 
 ---
 
@@ -23,13 +40,20 @@ All R analyses are provided as reproducible Quarto reports (`.qmd`), with their 
 ├── Manuscript repo.Rproj         RStudio project (paths are built with here::here())
 ├── R/
 │   ├── Code/                     Quarto reports (.qmd) and rendered reports (.html)
-│   ├── Data/                     Input data and CAPTAIN outputs used by the reports
-│   ├── Quarto_template/          Report styling (CSS, header, footer) used by all reports
+│   ├── Data/                     Input data and summarised CAPTAIN outputs used by the reports
+│   │   └── CAPTAIN3/             Summarised CAPTAIN v3 outputs
+│   ├── Quarto_template/          Report styling (CSS, header, footer)
 │   └── Outputs/                  Figures and tables produced by the reports
+│       ├── CAPTAIN3_protpop_worst/   Main CAPTAIN results (class-weighted and worst-served reward)
+│       └── CAPTAIN3_protpop/         CAPTAIN results with the class-weighted reward alone
 └── Python/
-    ├── captain_script_and_data.zip   CAPTAIN code, training configurations and training logs
-    └── *.py                          Scripts summarising CAPTAIN prediction outputs
+    ├── captain3/                     CAPTAIN v3 scripts used for the runs (data preparation, training, predictions)
+    ├── captain3_models.zip           CAPTAIN v3 settings, training logs and predictions
+    ├── Summarise CAPTAIN 3 outputs.py  Summarises the CAPTAIN v3 predictions for the R reports
+    └── captain_script_and_data.zip   Previous CAPTAIN 2 runs (superseded, kept for transparency)
 ```
+
+Output files in `R/Outputs/` are named after the manuscript figure or table they correspond to (e.g. `Fig4_priority_maps.png`, `TableS4_congruence_randomisation.png`). Figures shown only in the reports start with `report_`, and data tables with `data_`.
 
 ---
 
@@ -37,73 +61,47 @@ All R analyses are provided as reproducible Quarto reports (`.qmd`), with their 
 
 Run the steps in the order below. Open `Manuscript repo.Rproj` first so that all `here::here()` paths resolve from the repository root.
 
-### Step 0. Data preparation (`R/Code/CAPTAIN_data_preparation.R` and `R/Code/Manuscript_data_preparation.qmd`)
+### Step 0. Data preparation
 
-`CAPTAIN_data_preparation.R` documents how the species grid, the species range rasters and the conservation metrics (IUCN status, FUSE and EDGE2) were prepared from the raw data. It was written for the original project folder, so its input paths do not resolve within this repository, and it is provided for transparency.
+`R/Code/Manuscript_data_preparation.qmd` builds the species table used by CAPTAIN (`R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`), with a class from 1 to 5 for IUCN status, FUSE and EDGE2 for each of the 1,000 species, and checks it against the IUCN Red List. `R/Code/CAPTAIN_data_preparation.R` documents how the species grid, range rasters and conservation metrics were prepared from the raw data (written for the original project folder, provided for transparency).
 
-`Manuscript_data_preparation.qmd` reproduces its final step from files included in `R/Data/`: it builds the species table used by CAPTAIN (`continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`), with a class from 1 to 5 for IUCN status, FUSE and EDGE2 for each of the 1,000 species, and checks it against the IUCN Red List statuses.
+The table used for the CAPTAIN runs of May 2025 attached the classes to the wrong species names, because names and values were joined by row position. It is kept as `continental_shark_conservation_metrics_10_harmonised_IUCN_categories_May2025.csv` for comparison. The corrected table, built by matching species identifiers, was produced in November 2026, and all CAPTAIN analyses were re-run with it.
 
-- **Inputs:** `continental_shark_conservation_metrics_10_harmonised_IUCN.rds`, `global_species_lookup.rds` and `sharks_iucn_final.rds`
-- **Output:** `R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`
+### Step 1. Fishing effort
 
-The table used for the CAPTAIN runs of May 2025 attached the classes to the wrong species names, because names and values were joined by row position. It is kept as `continental_shark_conservation_metrics_10_harmonised_IUCN_categories_May2025.csv` for comparison. The corrected table, built by matching species IDs, was produced in November 2026.
+`R/Code/SAR_overpass_normalisation.qmd` explores the normalisation of SAR vessel detections by satellite overpass frequency. `R/Code/Manuscript_fishing_hours.qmd` combines AIS fishing hours from Global Fishing Watch (2017-2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024), normalised by overpass frequency, and trains random forest models (evaluated on out-of-bag predictions) to predict fishing hours where only SAR detections are available. Fishing hours are then aggregated onto the 0.5° grid of the prioritisation (`R/Data/Predicted_Fishing_Hours_05Deg_normalised.Rdata`).
 
-### Step 1. Fishing effort estimates (`R/Code/Manuscript_fishing_hours.qmd`)
+The raw AIS and SAR files are not included because of their size. They can be downloaded from the [Global Fishing Watch data portal](https://globalfishingwatch.org/data-download/). The trained random forest models (`R/Data/rf_*.rds`, about 700 MB each) are not included either; set `retrain_models <- TRUE` in the report to retrain them (about 4.5 hours on 4 cores).
 
-Combines AIS-based fishing hours from Global Fishing Watch (2017–2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024). SAR detections are normalised by the number of satellite overpasses per cell, and a random forest model is trained on cells with both data sources to predict fishing hours in cells with SAR detections only.
+### Step 2. Gap analysis
 
-- **Main output:** `R/Data/Predicted_Fishing_Hours_05Deg_normalised.Rdata` (fishing hours aggregated to the 0.5° analysis grid)
-- **Figures and tables:** Figs. S13 to S16 and Tables S6 to S9 (Supplementary Materials)
-- **Supporting report:** `SAR overpass normalization - exploratory analysis.qmd` documents the normalisation of SAR detections by satellite overpass frequency.
+`R/Code/Manuscript_gap_analysis.qmd` computes the percentage of each species' range in no-take MPAs (IUCN categories Ia to III), tests whether coverage differs among IUCN categories (Jonckheere-Terpstra test, Spearman correlation, Kolmogorov-Smirnov test and quantile regression), and compares coverage with a null model in which the same area of no-take MPAs is placed at random among the marine cells of each country's EEZ (100 iterations). The null model results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded when rendering (set `eval: true` in the null model chunk to re-run it).
 
-The raw AIS and SAR files are not included because of their size. They can be downloaded from the [Global Fishing Watch data portal](https://globalfishingwatch.org/data-download/): fishing effort v2 at 0.1° resolution (2017–2020), and SAR vessel detections (Paolo et al. 2024). The overpass counts and distance-to-port and distance-to-shore rasters were obtained from the same source. Steps 2 to 4 only require the processed output listed above.
+### Step 3. CAPTAIN prioritisation (Python)
 
-### Step 2. Gap analysis (`R/Code/Manuscript_gap_analysis.qmd`)
-
-- **Species-level coverage:** the percentage of each species' range covered by no-take MPAs, i.e. range cells inside no-take MPAs divided by all range cells.
-- **Coverage by IUCN status:** Jonckheere-Terpstra test, Spearman correlation, Kolmogorov-Smirnov test and quantile regression.
-- **Null model:** MPAs randomly placed within each country's EEZ while keeping each country's total protected area (100 iterations). Standardised effect sizes per species, aggregated per grid cell and ecoregion.
-- **Main outputs:** `species_mpa_coverage_NT.csv`, under-represented species tables, and ecoregion and EEZ summaries
-- **Figures and tables:** Fig. 2 (`Fig2_gap_analysis.png`), Figs. S1 to S8 and Tables S1 and S2
-
-### Step 3. CAPTAIN prioritisation (`Python/captain_script_and_data.zip`)
-
-The zip archive contains the CAPTAIN code (version 2.3), the training script (`train_n_predict_shark.py`), one configuration file per dimension of conservation value (`train_configs/shark_config_iucn.txt`, `shark_config_fuse.txt`, `shark_config_edge.txt`) and the training logs. Key settings, identical across the three models:
+Priorities were optimised with the scripts in `Python/captain3/` and [CAPTAIN v3](https://github.com/captain-project/captain3) (release 3.0.0rc1) by D. Silvestro, for each dimension of conservation value (IUCN status, FUSE and EDGE2) and two reward systems:
 
 | Setting | Value |
 |---|---|
-| Protection target | 10% of continental grid cells (`protection_target = 0.1`) |
-| Existing MPAs | Not used as a starting point (`add_to_existing_protected_areas = False`) |
-| Costs | Not used (`use_cost = False`) |
-| Reward weights for classes 1 to 5 | 1, 8, 16, 32, 64 (`risk_weights = -64 -32 -16 -8 -1`, listed from class 5 to class 1) |
+| Protection target | 10% of the 54,329 grid cells where at least one species occurs |
+| Reward weights for classes 1 to 5 | 1, 8, 16, 32 and 64 |
+| Rewards | class-weighted protected fraction of species ranges (`protpop`), alone or combined with a reward for the 10% worst-protected species (`protpop_worst`, main analysis) |
+| Training | 300 epochs, evolution strategy with 30 perturbations per epoch |
+| Predictions | 50 per model (weights of the last 50 epochs), at targets of 5%, 10%, 20% and 30% |
+| Costs and existing MPAs | Not used |
 
-Species classes are read from `R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`:
+`Python/Summarise CAPTAIN 3 outputs.py` reads the outputs directly from `captain3_models.zip` and saves to `R/Data/CAPTAIN3/` the priority of each cell (frequency of selection across the 50 predictions) and the protected fraction of each species' range, for each dimension, reward and target. These summarised outputs are included, so Step 4 can be run without re-running CAPTAIN.
 
-- **IUCN status:** 1 = Least Concern to 5 = Critically Endangered.
-- **FUSE and EDGE2:** scores rescaled to a maximum of 1 and binned into five equal-width classes (breaks at 0.2, 0.4, 0.6 and 0.8).
+### Step 4. Prioritisation results and overlap with fishing effort
 
-Species ranges are provided as one raster per species in `R/Data/tif files continental/` (1,000 species, 0.5° resolution).
+`R/Code/Manuscript_CAPTAIN_analyses.qmd` analyses the CAPTAIN priorities: priority maps, protection of species by class (relative to the maximum achievable under the 10% target) with beta regressions, spatial clustering of high-priority cells, congruence among dimensions with randomisation tests, sensitivity to the protection target, comparison of the two reward systems, and overlap with fishing effort (bivariate maps and ecoregion summaries). The reward system is set with the `reward` parameter:
 
-Prediction outputs (`.npz` files, 50 predictions per model) are summarised with the scripts in `Python/`:
-
-- `Analyse CAPTAIN 2 outputs IUCN 220725.py`, `... FUSE 220725.py`, `... EDGE2 220725.py`: cell-level priority (frequency of selection across predictions), saved as `R/Data/CAPTAIN2_*_full_results_averaged_budget0.1_replicates50.rds`
-- `Extract protect fraction CAPTAIN 2 0.1 budget_2nd run.py`: protected fraction of each species' range, saved as `R/Data/CAPTAIN2_protected_range_fractions_2ndrun.rds`
-
-Sensitivity to the protection target: `captain_budget_sensitivity_runs.zip` contains CAPTAIN predictions at targets of 5%, 20% and 30% (models trained at 10%, 50 predictions per target and dimension). `Summarise CAPTAIN 2 budget sensitivity runs.py` reads them directly from the zip (no need to unzip) and saves the priority of each cell to `R/Data/CAPTAIN2_budget_sensitivity_priorities.csv` and the protected fraction of each species' range (species in alphabetical order, as in the CAPTAIN input) to `R/Data/CAPTAIN2_budget_sensitivity_protected_range.csv`.
-
-The summarised outputs are included in `R/Data/`, so Step 4 can be run without re-running CAPTAIN. To re-run the Python scripts, edit `dir_path` at the top of each script to point to the local CAPTAIN prediction outputs.
-
-### Step 4. Prioritisation results and overlap with fishing effort (`R/Code/Manuscript_CAPTAIN_analyses.qmd`)
-
-- **Priority maps:** maps for each dimension and pairwise differences between dimensions.
-- **Validation:** beta regressions of species' range protection against their IUCN, FUSE and EDGE2 classes.
-- **Spatial pattern:** mean nearest-neighbour distances of high-priority cells.
-- **Congruence:** congruence of high-priority areas (priority > 0.9) among dimensions, with randomisation tests.
-- **Sensitivity to the protection target:** high-priority areas, species protection, nestedness and congruence at targets of 5%, 10%, 20% and 30% (Fig. S12 and Table S5).
-- **Overlap with fishing effort:** bivariate maps of priority and fishing effort, and ecoregion-level summaries.
-- **Figures:** Fig. 3 (`Fig3_protection_by_class.png`), Fig. 4 (`Fig4_priority_maps.png`), Fig. 5 (`Fig5_priorities_fishing_bivariate.png`), Figs. S9 and S10 (`FigS9_congruence_all_dimensions.png`, `FigS10_congruence_categories.png`), Tables S3 and S4, Fig. S11 (`FigS11_ecoregion_priority_fishing.png`)
-
-Output files in `R/Outputs/` are named after the manuscript figure or table they correspond to (e.g. `Fig4_priority_maps.png`, `FigS10_congruence_categories.png`, `TableS4_congruence_randomisation.png`). Figures shown only in the reports start with `report_`, and output data tables with `data_`.
+```
+quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop_worst
+mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html
+quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop
+mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop.html
+```
 
 ---
 
@@ -115,23 +113,23 @@ Output files in `R/Outputs/` are named after the manuscript figure or table they
 | `puvsp_marine.Rdata` | Species presence by grid cell | Derived from the range maps |
 | `sharks_iucn_final.rds` | IUCN Red List status per species | Pimiento et al. (2023) |
 | `continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv` | IUCN, FUSE and EDGE2 classes used in CAPTAIN | FUSE and EDGE2 scores from Pimiento et al. (2023) |
-| `mpa_NT_binary.tif` | No-take MPAs (IUCN categories Ia, Ib, II, III) on the 0.5° grid; a cell is protected if its centre falls within an MPA | World Database on Protected Areas, September 2024 |
-| `Predicted_Fishing_Hours_05Deg_normalised.Rdata` | Predicted fishing hours, 2017–2020 | Step 1 |
+| `iucn_name_corrections.csv` | Correspondence between range map and IUCN species names | This study |
+| `mpa_NT_binary.tif` | No-take MPAs (IUCN categories Ia, Ib, II, III) on the 0.5° grid | World Database on Protected Areas, September 2024 |
+| `Predicted_Fishing_Hours_05Deg_normalised.Rdata` | Predicted fishing hours, 2017-2020 | Step 1 |
 | `bathymetry-0.1deg-adjusted.tif` | Bathymetry | Global Fishing Watch |
 | `meow_ecos/` | Marine Ecoregions of the World | Spalding et al. (2007) |
 | `World_High_Seas_v2_20241010/` | High seas boundaries | Marine Regions |
 | `World_EEZ_v12_20231025/` (not included) | Exclusive Economic Zones, v12 | [Marine Regions](https://www.marineregions.org/downloads.php); download and place in `R/Data/` |
-| `CAPTAIN2_*.rds` | Summarised CAPTAIN outputs | Step 3 |
+| `CAPTAIN3/` | Summarised CAPTAIN v3 outputs | Step 3 |
 
 ---
 
 ## Software
 
-- **R (version 4.4.2) and Quarto.** Main packages: `sf`, `terra`, `raster`, `tidyverse`, `here`, `betareg`, `quantreg`, `DescTools`, `randomForest`, `caret`, `spatstat`, `biscale`, `patchwork`, `cowplot`, `ggplot2`, `kableExtra`.
-- **Python 3 with CAPTAIN 2.3.** See the configuration files in the CAPTAIN archive. Summary scripts use `numpy`, `pandas` and `pyreadr`.
+- **R (version 4.4.2) and Quarto.** Main packages: `sf`, `terra`, `raster`, `tidyverse`, `here`, `betareg`, `margins`, `quantreg`, `DescTools`, `randomForest`, `kableExtra`, `ggplot2`, `patchwork`.
+- **Python 3 with CAPTAIN v3** ([captain-project/captain3](https://github.com/captain-project/captain3)). The summary script uses `numpy` and `pandas`.
 
 ---
-
 
 ## Citation and contact
 

@@ -1,18 +1,25 @@
 ---
-title: "SAR overpass normalization - exploratory analysis"
+title: "Normalising SAR vessel detections by satellite overpasses"
 author: "Théophile L. Mouton"
-date: "`r Sys.Date()`"
+date: today
+date-format: "D MMMM YYYY"
 format:
   html:
     toc: true
+    number-sections: true
+    shift-heading-level-by: -1
     toc-location: right
     self-contained: true
     code-fold: true
     code-tools: true
+    lightbox: true
+    html-table-processing: none
+    fig-align: center
     css: ../Quarto_template/custom.css
     include-before-body: ../Quarto_template/header.html
     include-after-body: ../Quarto_template/footer_uzh.html
     theme: none
+    output-file: "SAR_overpass_normalisation.html"
 editor: visual
 execute:
   warning: false
@@ -230,4 +237,4 @@ Based on the analysis above, we can draw the following conclusions:
 
 **Normalisation dampens the Mediterranean signal.** After normalisation, East Asian seas (East China Sea, Korean Peninsula waters) remain the most intensively fished areas, consistent with AIS-based estimates. The Mediterranean signal is reduced relative to the unnormalized version, suggesting that part of the apparent high fishing pressure in that region may reflect higher overpass frequency rather than higher actual fishing activity.
 
-**Recommendation.** Given the magnitude of the spatial variation in overpass frequency and its correlation with key regions in our conservation conflict analysis, we recommend incorporating overpass normalisation into the main fishing pressure analysis. Specifically, `detections_per_overpass` should replace raw `count` as the SAR-derived fishing pressure metric in the random forest model. This will require re-running the model and updating the associated figures and results in the manuscript.
+**Recommendation and implementation.** Given the magnitude of the spatial variation in overpass frequency and its correlation with key regions in our conservation conflict analysis, we normalised SAR detections by overpass frequency in the main fishing effort analysis: `detections_per_overpass` replaces the raw `count` as the SAR predictor in the random forest models (see the report *Global fishing effort from AIS and SAR data*, `Manuscript_fishing_hours.html`).
