@@ -1,7 +1,7 @@
 # Data preparation for the CAPTAIN prioritisations (species grid, range rasters and conservation metrics).
 # Copied from the original project folder ("CAPTAIN in R/CAPTAIN sharks/CAPTAIN_data_preparation_high seas_vs_continental waters.R");
 # input paths refer to that folder and do not resolve within this repository. Provided for transparency.
-# The final step (species table used as CAPTAIN input) is reproduced from repository files in Manuscript_data_preparation.qmd.
+# The final step (species table used as CAPTAIN input) is reproduced from repository files in 01_data_preparation.qmd.
 # November 2026: the species tables are now built by matching species IDs (build_metrics_table()) instead of cbind.data.frame(),
 # which had attached the IUCN, FUSE and EDGE2 values to the wrong species names.
 # November 2026: 32 species named differently in sharks_iucn_final are matched through iucn_name_corrections.csv

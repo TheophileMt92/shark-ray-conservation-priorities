@@ -18,7 +18,7 @@ format:
     include-before-body: ../Quarto_template/header.html
     include-after-body: ../Quarto_template/footer_uzh.html
     theme: none
-    output-file: "Manuscript_CAPTAIN_analyses.html"
+    output-file: "05_CAPTAIN_analyses.html"
 params:
   reward: "protpop_worst"
 editor: visual
@@ -38,10 +38,10 @@ This report summarises the CAPTAIN 3 prioritisations run in November 2026 (D. Si
 The raw outputs (`Python/captain3_models.zip`) are summarised by `Python/Summarise CAPTAIN 3 outputs.py` into `R/Data/CAPTAIN3/`. The reward system is set with the `reward` parameter of this report. To render both versions:
 
 ```         
-quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop_worst
-mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html
-quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop
-mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop.html
+quarto render R/Code/05_CAPTAIN_analyses.qmd -P reward:protpop_worst
+mv R/Code/05_CAPTAIN_analyses.html R/Code/05_CAPTAIN_analyses_protpop_worst.html
+quarto render R/Code/05_CAPTAIN_analyses.qmd -P reward:protpop
+mv R/Code/05_CAPTAIN_analyses.html R/Code/05_CAPTAIN_analyses_protpop.html
 ```
 
 Figures and tables are saved in `R/Outputs/CAPTAIN3_<reward>/`, including the sensitivity analysis to the protection target (Fig. S12, Table S5).

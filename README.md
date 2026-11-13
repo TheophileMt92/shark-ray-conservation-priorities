@@ -25,12 +25,12 @@ The study has three components:
 
 | | Report | What it shows | Manuscript items |
 |:-:|---|---|---|
-| 1 | [**Data preparation: species table and conservation metrics**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_data_preparation.html) | Builds the table of IUCN, FUSE and EDGE2 classes for the 1,000 species, and checks it against the IUCN Red List | Input to all analyses |
-| 2 | [**Normalising SAR vessel detections by satellite overpasses**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/SAR_overpass_normalisation.html) | Explores how satellite overpass frequency affects SAR vessel detections, and why detections are normalised by overpass | Supporting analysis |
-| 3 | [**Global fishing effort from AIS and SAR data**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_fishing_hours.html) | Combines AIS fishing hours and SAR detections, and predicts fishing hours where only SAR detections exist with a random forest model | Figs. S13 to S16, Tables S6 to S9 |
-| 4 | [**Gap analysis: coverage of shark and ray ranges by no-take MPAs**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_gap_analysis.html) | Species and regional coverage by no-take MPAs, comparison between IUCN categories, and null model of MPA placement | Fig. 2, Figs. S1 to S8, Tables S1 and S2 |
-| 5 | [**Conservation priorities with CAPTAIN v3**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html) (main analysis) | Priority maps, protection of species by class, congruence among dimensions, sensitivity to the protection target, and overlap with fishing effort | Figs. 3 to 5, Figs. S9 to S12, Tables S3 to S5 and S10 |
-| 6 | [**Conservation priorities with CAPTAIN v3, class-weighted reward alone**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_CAPTAIN_analyses_protpop.html) | Same report with the class-weighted reward alone, for comparison | Figs. S17 and S18 |
+| 1 | [**Data preparation: species table and conservation metrics**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/01_data_preparation.html) | Builds the table of IUCN, FUSE and EDGE2 classes for the 1,000 species, and checks it against the IUCN Red List | Input to all analyses |
+| 2 | [**Normalising SAR vessel detections by satellite overpasses**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/02_SAR_overpass_normalisation.html) | Explores how satellite overpass frequency affects SAR vessel detections, and why detections are normalised by overpass | Supporting analysis |
+| 3 | [**Global fishing effort from AIS and SAR data**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/03_fishing_effort.html) | Combines AIS fishing hours and SAR detections, and predicts fishing hours where only SAR detections exist with a random forest model | Figs. S13 to S16, Tables S6 to S9 |
+| 4 | [**Gap analysis: coverage of shark and ray ranges by no-take MPAs**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/04_gap_analysis.html) | Species and regional coverage by no-take MPAs, comparison between IUCN categories, and null model of MPA placement | Fig. 2, Figs. S1 to S8, Tables S1 and S2 |
+| 5 | [**Conservation priorities with CAPTAIN v3**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/05_CAPTAIN_analyses_protpop_worst.html) (main analysis) | Priority maps, protection of species by class, congruence among dimensions, sensitivity to the protection target, and overlap with fishing effort | Figs. 3 to 5, Figs. S9 to S12, Tables S3 to S5 and S10 |
+| 6 | [**Conservation priorities with CAPTAIN v3, class-weighted reward alone**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/05_CAPTAIN_analyses_protpop.html) | Same report with the class-weighted reward alone, for comparison | Figs. S17 and S18 |
 
 The same reports are in `R/Code/` (`.qmd` source and rendered `.html`). The conceptual diagram (Fig. 1) is drawn in `R/Code/Fig1_conceptual_diagram.html`.
 
@@ -66,19 +66,19 @@ Run the steps in the order below. Open `Manuscript repo.Rproj` first so that all
 
 ### Step 0. Data preparation
 
-`R/Code/Manuscript_data_preparation.qmd` builds the species table used by CAPTAIN (`R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`), with a class from 1 to 5 for IUCN status, FUSE and EDGE2 for each of the 1,000 species, and checks it against the IUCN Red List. `R/Code/CAPTAIN_data_preparation.R` documents how the species grid, range rasters and conservation metrics were prepared from the raw data (written for the original project folder, provided for transparency).
+`R/Code/01_data_preparation.qmd` builds the species table used by CAPTAIN (`R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`), with a class from 1 to 5 for IUCN status, FUSE and EDGE2 for each of the 1,000 species, and checks it against the IUCN Red List. `R/Code/00_raw_data_preparation.R` documents how the species grid, range rasters and conservation metrics were prepared from the raw data (written for the original project folder, provided for transparency).
 
 The table used for the CAPTAIN runs of May 2025 attached the classes to the wrong species names, because names and values were joined by row position. It is kept as `continental_shark_conservation_metrics_10_harmonised_IUCN_categories_May2025.csv` for comparison. The corrected table, built by matching species identifiers, was produced in November 2026, and all CAPTAIN analyses were re-run with it.
 
 ### Step 1. Fishing effort
 
-`R/Code/SAR_overpass_normalisation.qmd` explores the normalisation of SAR vessel detections by satellite overpass frequency. `R/Code/Manuscript_fishing_hours.qmd` combines AIS fishing hours from Global Fishing Watch (2017-2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024), normalised by overpass frequency, and trains random forest models (evaluated on out-of-bag predictions) to predict fishing hours where only SAR detections are available. Fishing hours are then aggregated onto the 0.5° grid of the prioritisation (`R/Data/Predicted_Fishing_Hours_05Deg_normalised.Rdata`).
+`R/Code/02_SAR_overpass_normalisation.qmd` explores the normalisation of SAR vessel detections by satellite overpass frequency. `R/Code/03_fishing_effort.qmd` combines AIS fishing hours from Global Fishing Watch (2017-2020) with Sentinel-1 SAR vessel detections (Paolo et al. 2024), normalised by overpass frequency, and trains random forest models (evaluated on out-of-bag predictions) to predict fishing hours where only SAR detections are available. Fishing hours are then aggregated onto the 0.5° grid of the prioritisation (`R/Data/Predicted_Fishing_Hours_05Deg_normalised.Rdata`).
 
 The raw AIS and SAR files are not included because of their size. They can be downloaded from the [Global Fishing Watch data portal](https://globalfishingwatch.org/data-download/). The trained random forest models (`R/Data/rf_*.rds`, about 700 MB each) are not included either; set `retrain_models <- TRUE` in the report to retrain them (about 4.5 hours on 4 cores).
 
 ### Step 2. Gap analysis
 
-`R/Code/Manuscript_gap_analysis.qmd` computes the percentage of each species' range in no-take MPAs (IUCN categories Ia to III), tests whether coverage differs among IUCN categories (Jonckheere-Terpstra test, Spearman correlation, Kolmogorov-Smirnov test and quantile regression), and compares coverage with a null model in which the same area of no-take MPAs is placed at random among the marine cells of each country's EEZ (100 iterations). The null model results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded when rendering (set `eval: true` in the null model chunk to re-run it).
+`R/Code/04_gap_analysis.qmd` computes the percentage of each species' range in no-take MPAs (IUCN categories Ia to III), tests whether coverage differs among IUCN categories (Jonckheere-Terpstra test, Spearman correlation, Kolmogorov-Smirnov test and quantile regression), and compares coverage with a null model in which the same area of no-take MPAs is placed at random among the marine cells of each country's EEZ (100 iterations). The null model results are saved in `R/Outputs/data_null_model_coverage.csv` and loaded when rendering (set `eval: true` in the null model chunk to re-run it).
 
 ### Step 3. CAPTAIN prioritisation (Python)
 
@@ -97,13 +97,13 @@ Priorities were optimised with the scripts in `Python/captain3/` and [CAPTAIN v3
 
 ### Step 4. Prioritisation results and overlap with fishing effort
 
-`R/Code/Manuscript_CAPTAIN_analyses.qmd` analyses the CAPTAIN priorities: priority maps, protection of species by class (relative to the maximum achievable under the 10% target) with beta regressions, spatial clustering of high-priority cells, congruence among dimensions with randomisation tests, sensitivity to the protection target, comparison of the two reward systems, and overlap with fishing effort (bivariate maps and ecoregion summaries). The reward system is set with the `reward` parameter:
+`R/Code/05_CAPTAIN_analyses.qmd` analyses the CAPTAIN priorities: priority maps, protection of species by class (relative to the maximum achievable under the 10% target) with beta regressions, spatial clustering of high-priority cells, congruence among dimensions with randomisation tests, sensitivity to the protection target, comparison of the two reward systems, and overlap with fishing effort (bivariate maps and ecoregion summaries). The reward system is set with the `reward` parameter:
 
 ```
-quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop_worst
-mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html
-quarto render R/Code/Manuscript_CAPTAIN_analyses.qmd -P reward:protpop
-mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_protpop.html
+quarto render R/Code/05_CAPTAIN_analyses.qmd -P reward:protpop_worst
+mv R/Code/05_CAPTAIN_analyses.html R/Code/05_CAPTAIN_analyses_protpop_worst.html
+quarto render R/Code/05_CAPTAIN_analyses.qmd -P reward:protpop
+mv R/Code/05_CAPTAIN_analyses.html R/Code/05_CAPTAIN_analyses_protpop.html
 ```
 
 ---

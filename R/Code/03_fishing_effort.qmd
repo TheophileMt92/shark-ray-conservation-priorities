@@ -19,7 +19,7 @@ format:
     include-before-body: ../Quarto_template/header.html
     include-after-body: ../Quarto_template/footer_uzh.html
     theme: none
-    output-file: "Manuscript_fishing_hours.html"
+    output-file: "03_fishing_effort.html"
 editor: visual
 execute:
   warning: false

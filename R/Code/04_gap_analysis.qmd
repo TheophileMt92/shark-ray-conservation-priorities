@@ -18,7 +18,7 @@ format:
     include-before-body: ../Quarto_template/header.html
     include-after-body: ../Quarto_template/footer_uzh.html
     theme: none
-    output-file: "Manuscript_gap_analysis.html"
+    output-file: "04_gap_analysis.html"
 editor: visual
 execute:
   warning: false
