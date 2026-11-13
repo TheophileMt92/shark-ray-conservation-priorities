@@ -852,7 +852,7 @@ s10_counts <- species_classes %>%
   mutate(Dimension = factor(Dimension, levels = c("IUCN", "FUSE", "EDGE2"))) %>%
   pivot_wider(names_from = Class, values_from = n, names_prefix = "Class ") %>%
   arrange(Dimension) %>%
-  mutate(across(starts_with("Class"), ~ format(.x, big.mark = ",")),
+  mutate(across(starts_with("Class"), ~ format(.x, big.mark = ",", trim = TRUE)),
          Reward = "Number of species", `All species` = "1,000",
          `< 10% protected` = "", `No protection` = "")
 
