@@ -53,7 +53,8 @@ The same reports are in `R/Code/` (`.qmd` source and rendered `.html`). The conc
     ├── captain3/                     CAPTAIN v3 scripts used for the runs (data preparation, training, predictions)
     ├── captain3_models.zip           CAPTAIN v3 settings, training logs and predictions
     ├── Summarise CAPTAIN 3 outputs.py  Summarises the CAPTAIN v3 predictions for the R reports
-    └── captain_script_and_data.zip   Previous CAPTAIN 2 runs (superseded, kept for transparency)
+    └── archive_CAPTAIN2/
+        └── captain_script_and_data.zip  CAPTAIN 2 code and settings of the Revision 1 analyses (superseded; the full CAPTAIN 2 runs are in the Zenodo v1.0 archive, https://doi.org/10.5281/zenodo.20719267)
 ```
 
 Output files in `R/Outputs/` are named after the manuscript figure or table they correspond to (e.g. `Fig4_priority_maps.png`, `TableS4_congruence_randomisation.png`). Figures shown only in the reports start with `report_`, and data tables with `data_`.

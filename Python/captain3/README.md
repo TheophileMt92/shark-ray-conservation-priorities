@@ -1,7 +1,7 @@
 # Shark prioritization with CAPTAIN 3 (captain-ng)
 
 Re-runs the three CAPTAIN 2 prioritizations (IUCN, FUSE, EDGE2; configs in
-`captain_script_and_data.zip`, `predict_configs/`) with captain-ng and the corrected
+`Python/archive_CAPTAIN2/captain_script_and_data.zip`, `predict_configs/`) with captain-ng and the corrected
 species table (`R/Data/continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv`).
 
 ## Setup

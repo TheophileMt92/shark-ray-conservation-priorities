@@ -1,6 +1,6 @@
 """Shared setup of the CAPTAIN 3 (captain-ng) shark prioritization runs.
 
-Re-implements the CAPTAIN 2 analyses (Python/captain_script_and_data/predict_configs):
+Re-implements the CAPTAIN 2 analyses (Python/archive_CAPTAIN2/captain_script_and_data.zip, predict_configs/):
 static SDMs, no costs or disturbance, 10% of the planning units protected, and species
 prioritized by one of three metrics (IUCN, FUSE, EDGE2), each coded 1-5 in the species
 table (5 = highest priority).
