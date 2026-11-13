@@ -1,6 +1,6 @@
 # Global gaps and priorities for shark and ray conservation
 
-[![Reports](https://img.shields.io/badge/reports-GitHub%20Pages-0a6ebd)](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/)
+[![Reports](https://img.shields.io/badge/reports-GitHub%20Pages-0a6ebd)](https://theophilemt92.github.io/shark-ray-conservation-priorities/)
 [![Zenodo](https://img.shields.io/badge/archive-Zenodo-1682d4)](https://doi.org/10.5281/zenodo.20719267)
 [![Preprint](https://img.shields.io/badge/preprint-bioRxiv-b31b1b)](https://www.biorxiv.org/content/10.1101/2025.11.28.691085v1)
 
@@ -22,12 +22,12 @@ Every analysis is a reproducible Quarto report. The rendered reports can be read
 
 | | Report | What it shows | Manuscript items |
 |:-:|---|---|---|
-| 1 | [**Data preparation: species table and conservation metrics**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_data_preparation.html) | Builds the table of IUCN, FUSE and EDGE2 classes for the 1,000 species, and checks it against the IUCN Red List | Input to all analyses |
-| 2 | [**Normalising SAR vessel detections by satellite overpasses**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/SAR_overpass_normalisation.html) | Explores how satellite overpass frequency affects SAR vessel detections, and why detections are normalised by overpass | Supporting analysis |
-| 3 | [**Global fishing effort from AIS and SAR data**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_fishing_hours.html) | Combines AIS fishing hours and SAR detections, and predicts fishing hours where only SAR detections exist with a random forest model | Figs. S13 to S16, Tables S6 to S9 |
-| 4 | [**Gap analysis: coverage of shark and ray ranges by no-take MPAs**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_gap_analysis.html) | Species and regional coverage by no-take MPAs, comparison between IUCN categories, and null model of MPA placement | Fig. 2, Figs. S1 to S8, Tables S1 and S2 |
-| 5 | [**Conservation priorities with CAPTAIN v3**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html) (main analysis) | Priority maps, protection of species by class, congruence among dimensions, sensitivity to the protection target, and overlap with fishing effort | Figs. 3 to 5, Figs. S9 to S12, Tables S3 to S5 and S10 |
-| 6 | [**Conservation priorities with CAPTAIN v3, class-weighted reward alone**](https://theophilemt92.github.io/CAPTAIN_elasmo_manuscript/R/Code/Manuscript_CAPTAIN_analyses_protpop.html) | Same report with the class-weighted reward alone, for comparison | Figs. S17 and S18 |
+| 1 | [**Data preparation: species table and conservation metrics**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_data_preparation.html) | Builds the table of IUCN, FUSE and EDGE2 classes for the 1,000 species, and checks it against the IUCN Red List | Input to all analyses |
+| 2 | [**Normalising SAR vessel detections by satellite overpasses**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/SAR_overpass_normalisation.html) | Explores how satellite overpass frequency affects SAR vessel detections, and why detections are normalised by overpass | Supporting analysis |
+| 3 | [**Global fishing effort from AIS and SAR data**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_fishing_hours.html) | Combines AIS fishing hours and SAR detections, and predicts fishing hours where only SAR detections exist with a random forest model | Figs. S13 to S16, Tables S6 to S9 |
+| 4 | [**Gap analysis: coverage of shark and ray ranges by no-take MPAs**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_gap_analysis.html) | Species and regional coverage by no-take MPAs, comparison between IUCN categories, and null model of MPA placement | Fig. 2, Figs. S1 to S8, Tables S1 and S2 |
+| 5 | [**Conservation priorities with CAPTAIN v3**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html) (main analysis) | Priority maps, protection of species by class, congruence among dimensions, sensitivity to the protection target, and overlap with fishing effort | Figs. 3 to 5, Figs. S9 to S12, Tables S3 to S5 and S10 |
+| 6 | [**Conservation priorities with CAPTAIN v3, class-weighted reward alone**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_CAPTAIN_analyses_protpop.html) | Same report with the class-weighted reward alone, for comparison | Figs. S17 and S18 |
 
 The same reports are in `R/Code/` (`.qmd` source and rendered `.html`).
 
