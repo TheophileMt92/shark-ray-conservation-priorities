@@ -8,6 +8,8 @@ Data and code for the manuscript:
 
 > Mouton, T. L., Silvestro, D., Kocáková, K., Spitznagel, D., Leprieur, F., & Pimiento, C. Global gaps and priorities for shark and ray conservation: Integrating threat, function, and evolutionary distinctiveness. *Science Advances* (in revision). Preprint: [bioRxiv 10.1101/2025.11.28.691085](https://www.biorxiv.org/content/10.1101/2025.11.28.691085v1)
 
+![Conceptual diagram of the study](R/Outputs/Fig1_conceptual_diagram.png)
+
 The study has three components:
 
 1. **Gap analysis**: how much of the range of each of 1,000 elasmobranch species is covered by no-take marine protected areas (MPAs), compared with a null model of random MPA placement.
@@ -18,7 +20,8 @@ The study has three components:
 
 ## Read the analyses
 
-Every analysis is a reproducible Quarto report. The rendered reports can be read in any web browser, with the code folded under each step, the results, and all figures and tables of the manuscript. No programming knowledge is needed to read them.
+> [!TIP]
+> Every analysis is a reproducible Quarto report. The reports below open in any web browser and show the methods, results, figures and tables of the manuscript, with the code folded under each step. No programming knowledge is needed to read them.
 
 | | Report | What it shows | Manuscript items |
 |:-:|---|---|---|
@@ -29,7 +32,7 @@ Every analysis is a reproducible Quarto report. The rendered reports can be read
 | 5 | [**Conservation priorities with CAPTAIN v3**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_CAPTAIN_analyses_protpop_worst.html) (main analysis) | Priority maps, protection of species by class, congruence among dimensions, sensitivity to the protection target, and overlap with fishing effort | Figs. 3 to 5, Figs. S9 to S12, Tables S3 to S5 and S10 |
 | 6 | [**Conservation priorities with CAPTAIN v3, class-weighted reward alone**](https://theophilemt92.github.io/shark-ray-conservation-priorities/R/Code/Manuscript_CAPTAIN_analyses_protpop.html) | Same report with the class-weighted reward alone, for comparison | Figs. S17 and S18 |
 
-The same reports are in `R/Code/` (`.qmd` source and rendered `.html`).
+The same reports are in `R/Code/` (`.qmd` source and rendered `.html`). The conceptual diagram (Fig. 1) is drawn in `R/Code/Fig1_conceptual_diagram.html`.
 
 ---
 
@@ -107,20 +110,28 @@ mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_pr
 
 ## Input data and sources
 
-| File (in `R/Data/`) | Content | Source |
+All files are in `R/Data/`.
+
+| File | Content | Source |
 |---|---|---|
-| `tif files continental/*.tif` | Range maps of 1,000 elasmobranch species on a 0.5° grid | IUCN Red List range maps (accessed October 2021), as compiled in Pimiento et al. (2023) |
+| **Species ranges** | | |
+| `tif files continental/*.tif` | Range maps of the 1,000 elasmobranch species on a 0.5° grid | IUCN Red List range maps (accessed October 2021), as compiled in Pimiento et al. (2023) |
 | `puvsp_marine.Rdata` | Species presence by grid cell | Derived from the range maps |
+| **Conservation status and metrics** | | |
 | `sharks_iucn_final.rds` | IUCN Red List status per species | Pimiento et al. (2023) |
-| `continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv` | IUCN, FUSE and EDGE2 classes used in CAPTAIN | FUSE and EDGE2 scores from Pimiento et al. (2023) |
 | `iucn_name_corrections.csv` | Correspondence between range map and IUCN species names | This study |
+| `continental_shark_conservation_metrics_10_harmonised_IUCN_categories.csv` | IUCN, FUSE and EDGE2 classes used in CAPTAIN | FUSE and EDGE2 scores from Pimiento et al. (2023); Step 0 |
+| **Protected areas** | | |
 | `mpa_NT_binary.tif` | No-take MPAs (IUCN categories Ia, Ib, II, III) on the 0.5° grid | World Database on Protected Areas, September 2024 |
-| `Predicted_Fishing_Hours_05Deg_normalised.Rdata` | Predicted fishing hours, 2017-2020 | Step 1 |
-| `bathymetry-0.1deg-adjusted.tif` | Bathymetry | Global Fishing Watch |
+| **Fishing effort** | | |
+| `Predicted_Fishing_Hours_05Deg_normalised.Rdata` | Fishing hours 2017-2020 from AIS and SAR, on the 0.5° grid | Global Fishing Watch; Step 1 |
+| `bathymetry-0.1deg-adjusted.tif` | Bathymetry, used in the fishing model and the null model | Global Fishing Watch |
+| **Spatial boundaries** | | |
 | `meow_ecos/` | Marine Ecoregions of the World | Spalding et al. (2007) |
-| `World_High_Seas_v2_20241010/` | High seas boundaries | Marine Regions |
 | `World_EEZ_v12_20231025/` (not included) | Exclusive Economic Zones, v12 | [Marine Regions](https://www.marineregions.org/downloads.php); download and place in `R/Data/` |
-| `CAPTAIN3/` | Summarised CAPTAIN v3 outputs | Step 3 |
+| `World_High_Seas_v2_20241010/` | High seas boundaries | Marine Regions |
+| **Prioritisation outputs** | | |
+| `CAPTAIN3/` | Cell priorities and protected fraction of species ranges, for each dimension, reward and target | CAPTAIN v3; Step 3 |
 
 ---
 
@@ -128,6 +139,12 @@ mv R/Code/Manuscript_CAPTAIN_analyses.html R/Code/Manuscript_CAPTAIN_analyses_pr
 
 - **R (version 4.4.2) and Quarto.** Main packages: `sf`, `terra`, `raster`, `tidyverse`, `here`, `betareg`, `margins`, `quantreg`, `DescTools`, `randomForest`, `kableExtra`, `ggplot2`, `patchwork`.
 - **Python 3 with CAPTAIN v3** ([captain-project/captain3](https://github.com/captain-project/captain3)). The summary script uses `numpy` and `pandas`.
+
+---
+
+## Acknowledgements
+
+The analyses and code in this repository were produced under a purchase order from the University of Zurich, for the Pimiento Research Group (Catalina Pimiento), Department of Paleontology.
 
 ---
 

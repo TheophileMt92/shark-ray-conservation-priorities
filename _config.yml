@@ -1,0 +1,8 @@
+theme: jekyll-theme-cayman
+title: Global gaps and priorities for shark and ray conservation
+description: Data, code and reproducible reports for Mouton et al. (Science Advances, in revision)
+exclude:
+  - "*.qmd"
+  - "*.Rproj"
+  - Python
+  - R/Data

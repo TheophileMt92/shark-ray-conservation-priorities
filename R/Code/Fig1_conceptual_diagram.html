@@ -1,0 +1,95 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1600px; height: 975px; background: #fff; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #111; position: relative; }
+  .h { position: absolute; top: 24px; width: 461px; text-align: center; font-weight: 700; font-size: 20px; letter-spacing: 0.5px; }
+  .box { position: absolute; width: 461px; border: 2.5px solid #111; border-radius: 12px; padding: 14px 17px; background: #fff; }
+  .tag { display: inline-block; font-size: 13px; letter-spacing: 0.3px; padding: 3px 10px; border-radius: 5px; border: 2px solid; margin-bottom: 9px; }
+  .blue { background: #dde8f6; border-color: #8fb1dd; color: #2f5f9a; }
+  .teal { background: #dcf2ec; border-color: #86cdbb; color: #2a7f6b; }
+  .red { background: #f8e0df; border-color: #e3908d; color: #a93a36; }
+  .gold { background: #f8eedb; border-color: #dcbb7a; color: #85621f; }
+  .purple { background: #ebe5f8; border-color: #ad9ee6; color: #5a45a8; }
+  .t { font-weight: 700; font-size: 19.5px; line-height: 1.35; margin-bottom: 6px; }
+  .p { font-size: 15.5px; line-height: 1.45; }
+  .sub { border-left: 4px solid; padding: 2px 0 2px 14px; margin: 16px 0 0 0; min-height: 76px; }
+  .sub b { font-size: 16.5px; display: block; margin-bottom: 4px; }
+  .sub span { font-size: 14.5px; line-height: 1.45; display: block; }
+  svg { position: absolute; left: 0; top: 0; }
+</style></head>
+<body>
+<div class="h" style="left:24px">DATA INPUTS</div>
+<div class="h" style="left:571px">ANALYSES</div>
+<div class="h" style="left:1115px">OUTPUTS</div>
+
+<div class="box" style="left:24px; top:62px; height:143px">
+  <div class="tag blue">SPECIES DISTRIBUTIONS</div>
+  <div class="t">Range maps for 1,000 species</div>
+  <div class="p">Global IUCN range maps of all species with IUCN, FUSE and EDGE2 data, projected onto a 0.5° ocean grid.</div>
+</div>
+<div class="box" style="left:24px; top:217px; height:147px">
+  <div class="tag teal">PROTECTED AREAS</div>
+  <div class="t">Marine Protected Areas</div>
+  <div class="p">Global database of no-take MPAs, areas where all extractive activities are prohibited.</div>
+</div>
+<div class="box" style="left:24px; top:380px; height:408px">
+  <div class="tag red">CONSERVATION INDICES</div>
+  <div class="t">Three complementary indices</div>
+  <div class="sub" style="border-color:#e0726d"><b>Extinction risk</b><span>IUCN Red List status. How threatened is each species?</span></div>
+  <div class="sub" style="border-color:#3fbfa3"><b>Ecological role</b><span>FUSE. How unique and specialised is each species' function, weighted by extinction risk?</span></div>
+  <div class="sub" style="border-color:#9b86e0"><b>Evolutionary heritage</b><span>EDGE2. How ancient and distinct is each species' lineage, weighted by extinction risk?</span></div>
+</div>
+<div class="box" style="left:24px; top:803px; height:152px">
+  <div class="tag gold">HUMAN FOOTPRINT</div>
+  <div class="t">Global fishing pressure</div>
+  <div class="p">Vessel tracking (AIS) and satellite radar (SAR) combined to estimate industrial fishing effort across ocean regions.</div>
+</div>
+
+<div class="box" style="left:571px; top:62px; height:161px">
+  <div class="tag gold">GAP ANALYSIS</div>
+  <div class="t">Where are the protection gaps?</div>
+  <div class="p">We calculate how much of each species' range falls within no-take MPAs, and compare this to what would be expected by chance.</div>
+</div>
+<div class="box" style="left:571px; top:270px; height:214px">
+  <div class="tag purple">CONSERVATION PRIORITISATION</div>
+  <div class="t">Where should we protect?</div>
+  <div class="p">Using the CAPTAIN reinforcement learning algorithm, we identify which ocean areas would maximise conservation benefit, separately for each of the three indices, within a 10% strict protection target, while limiting the number of poorly protected species.</div>
+</div>
+<div class="box" style="left:571px; top:519px; height:222px">
+  <div class="tag red">CONFLICTS AND OPPORTUNITIES</div>
+  <div class="t">Where are the conflicts and opportunities?</div>
+  <div class="p">We overlay conservation priority maps with fishing pressure to identify areas of high conflict, where intervention is most urgent, and areas where proactive protection is possible.</div>
+</div>
+
+<div class="box" style="left:1115px; top:61px; height:161px">
+  <div class="tag gold">OUTPUT 1</div>
+  <div class="t">A global picture of protection shortfalls</div>
+  <div class="p">Species-level and region-level assessment of how poorly current MPAs serve elasmobranch conservation.</div>
+</div>
+<div class="box" style="left:1115px; top:253px; height:183px">
+  <div class="tag purple">OUTPUT 2</div>
+  <div class="t">Priority maps across three indices</div>
+  <div class="p">Spatial maps identifying where ocean protection would deliver the greatest benefit for threatened, functionally unique and specialised, and evolutionarily distinct species, and where all three converge.</div>
+</div>
+<div class="box" style="left:1115px; top:497px; height:180px">
+  <div class="tag red">OUTPUT 3</div>
+  <div class="t">An evidence base for strategic action</div>
+  <div class="p">A clear distinction between areas of high conflict requiring intervention and areas suited to proactive protection, informing where and how conservation resources should be deployed.</div>
+</div>
+
+<svg width="1600" height="975">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>
+  <g stroke="#111" stroke-width="2.2" fill="none" marker-end="url(#a)">
+    <path d="M486,149 L569,149"/>
+    <path d="M486,315 L530,315 L530,204 L569,204"/>
+    <path d="M486,450 L569,450"/>
+    <path d="M486,855 L530,855 L530,655 L569,655"/>
+    <path d="M801,224 L801,268"/>
+    <path d="M801,485 L801,517"/>
+    <path d="M1033,149 L1113,149"/>
+    <path d="M1033,359 L1113,359"/>
+    <path d="M1033,591 L1113,591"/>
+  </g>
+</svg>
+</body></html>
