@@ -31,3 +31,9 @@ R/Data/Trait_data_final.xlsx
 # CAPTAIN 3 runs (prepared data, models, predictions)
 Python/captain3/runs/
 __pycache__/
+
+# Internal working report (not part of the published analyses)
+R/Code/CAPTAIN3_manuscript_changes.*
+R/Outputs/CAPTAIN3_comparison/
+R/Code/*.rmarkdown
+R/Code/*_files/
